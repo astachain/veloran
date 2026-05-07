@@ -1,0 +1,108 @@
+// Veloran database schema
+// Postgres for prod (Vercel/Neon). Local dev can use Postgres too via Docker, or
+// override DATABASE_URL to a SQLite file for offline work.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// A human (creator) or subscribed agent. Identified by Privy user ID.
+model Creator {
+  id             String   @id @default(cuid())
+  privyUserId    String   @unique                  // from Privy: did:privy:...
+  email          String?                           // optional, from Privy email login
+  solanaAddress  String?  @unique                  // the embedded wallet pubkey (assigned on first login)
+  displayName    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  posts          Post[]
+  unlocks        Unlock[]  @relation("UnlockedBy")
+
+  // Subscription tier this creator offers (monthly + yearly).
+  tier           SubscriptionTier?
+
+  // People who have subscribed to this creator.
+  subscribers    Subscription[] @relation("SubscribedTo")
+
+  // Subscriptions this user has *bought* from other creators.
+  subscribingTo  Subscription[] @relation("Subscribing")
+}
+
+// A paywalled piece of content.
+model Post {
+  id             String   @id @default(cuid())
+  slug           String   @unique                  // URL: /p/<slug>
+  title          String
+  preview        String                            // 1-line teaser shown before paywall
+  content        String                            // the gated markdown/text
+  priceUsdc      Int                               // price in micro-USDC (1_000_000 = 1 USDC)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  creatorId      String
+  creator        Creator  @relation(fields: [creatorId], references: [id])
+
+  unlocks        Unlock[]
+}
+
+// A creator's subscription pricing. One row per creator. Either price can
+// be null = that plan is disabled. Active=false hides the tier entirely.
+model SubscriptionTier {
+  id           String   @id @default(cuid())
+  creatorId    String   @unique
+  creator      Creator  @relation(fields: [creatorId], references: [id])
+
+  monthlyPrice Int?     // micro-USDC; null = monthly disabled
+  yearlyPrice  Int?     // micro-USDC; null = yearly disabled
+  active       Boolean  @default(true)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// One row per successful subscription payment. expiresAt is computed at
+// purchase time from `plan` (monthly = +30d, yearly = +365d).
+model Subscription {
+  id                  String   @id @default(cuid())
+
+  creatorId           String                                  // who's being subscribed to
+  creator             Creator  @relation("SubscribedTo", fields: [creatorId], references: [id])
+
+  // Logged-in user's Creator row. Null only if a future agent path adds subs.
+  subscriberCreatorId String?
+  subscriber          Creator? @relation("Subscribing", fields: [subscriberCreatorId], references: [id])
+  subscriberAddress   String                                  // payer pubkey (always recorded)
+
+  plan                String                                  // "monthly" | "yearly"
+  amountUsdc          Int
+
+  startsAt            DateTime @default(now())
+  expiresAt           DateTime
+  txSignature         String   @unique
+  createdAt           DateTime @default(now())
+
+  @@index([creatorId, subscriberAddress, expiresAt])
+}
+
+// One row per successful payment (human or agent).
+model Unlock {
+  id             String   @id @default(cuid())
+  postId         String
+  post           Post     @relation(fields: [postId], references: [id])
+
+  // readerCreatorId is nullable: AI agents pay without signing up via Privy.
+  readerCreatorId String?
+  readerCreator   Creator? @relation("UnlockedBy", fields: [readerCreatorId], references: [id])
+  readerAddress  String                            // pubkey that paid, always recorded
+  readerType     String                            // "human" | "agent"
+
+  amountUsdc     Int                               // micro-USDC paid
+  txSignature    String   @unique                  // Solana tx signature — our source of truth
+  createdAt      DateTime @default(now())
+}
