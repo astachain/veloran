@@ -2,31 +2,19 @@ import type { ParsedTransactionWithMeta } from "@solana/web3.js";
 import { PublicKey } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import {
-  USDC_DEVNET_MINT,
+  USDC_MINT,
   VELORAN_PROGRAM_ID,
   VELORAN_TREASURY,
+  VELORAN_X402_NETWORK,
 } from "./solana";
 
-/**
- * Veloran's x402-style payment scheme.
- *
- * The official Coinbase x402 "exact" SVM scheme rejects custom-program
- * calls (it requires a vanilla SPL transferChecked). Since our 95/5
- * split *is* the differentiator, we keep the 402 + X-PAYMENT envelope
- * but use our own scheme name + verification rules. See
- * docs/x402-spike.md for the rationale.
- */
 export const VELORAN_X402_SCHEME = "exact-veloran";
-export const VELORAN_X402_NETWORK = "solana-devnet";
+export { VELORAN_X402_NETWORK } from "./solana";
 export const X402_VERSION = 1;
 
 /** Mirror of the program's PLATFORM_BPS constant (5.00%). */
 export const PLATFORM_BPS = 500n;
 export const BPS_DENOMINATOR = 10_000n;
-
-// ---------------------------------------------------------------------------
-// 402 challenge construction
-// ---------------------------------------------------------------------------
 
 export type PostForRequirements = {
   slug: string;
@@ -51,25 +39,35 @@ export type PaymentRequirements = {
   extra: {
     programId: string;
     splitBps: { creator: number; platform: number };
+    intentId?: string;
+    memo?: string;
+    expiresAt?: string;
   };
 };
 
+export type PaymentIntentForRequirements = {
+  id: string;
+  memo: string;
+  expiresAt: Date;
+};
+
 export function buildPaymentRequirements(
-  post: PostForRequirements
+  post: PostForRequirements,
+  intent?: PaymentIntentForRequirements
 ): PaymentRequirements {
   const creatorAta = getAssociatedTokenAddressSync(
-    USDC_DEVNET_MINT,
+    USDC_MINT,
     new PublicKey(post.creator.solanaAddress)
   ).toBase58();
   const platformAta = getAssociatedTokenAddressSync(
-    USDC_DEVNET_MINT,
+    USDC_MINT,
     VELORAN_TREASURY
   ).toBase58();
 
   return {
     scheme: VELORAN_X402_SCHEME,
     network: VELORAN_X402_NETWORK,
-    asset: USDC_DEVNET_MINT.toBase58(),
+    asset: USDC_MINT.toBase58(),
     maxAmountRequired: String(post.priceUsdc),
     resource: `/api/x402/${post.slug}`,
     description: `Unlock "${post.preview}" — pays creator (95%) + Veloran (5%) via on-chain split`,
@@ -85,19 +83,23 @@ export function buildPaymentRequirements(
         creator: Number(BPS_DENOMINATOR - PLATFORM_BPS),
         platform: Number(PLATFORM_BPS),
       },
+      ...(intent
+        ? {
+            intentId: intent.id,
+            memo: intent.memo,
+            expiresAt: intent.expiresAt.toISOString(),
+          }
+        : {}),
     },
   };
 }
-
-// ---------------------------------------------------------------------------
-// X-PAYMENT header coding
-// ---------------------------------------------------------------------------
 
 export type PaymentHeader = {
   scheme: string;
   network: string;
   txSignature: string;
   payerAddress: string;
+  intentId?: string;
 };
 
 export function base64urlEncode(input: string): string {
@@ -137,7 +139,6 @@ export function parsePaymentHeader(
   if (typeof p.txSignature !== "string" || p.txSignature.length < 32) return null;
   if (typeof p.payerAddress !== "string" || p.payerAddress.length < 32) return null;
 
-  // Validate payer is a real base58 pubkey (cheap throw catch)
   try {
     new PublicKey(p.payerAddress);
   } catch {
@@ -149,6 +150,7 @@ export function parsePaymentHeader(
     network: p.network,
     txSignature: p.txSignature,
     payerAddress: p.payerAddress,
+    ...(typeof p.intentId === "string" ? { intentId: p.intentId } : {}),
   };
 }
 
@@ -159,52 +161,53 @@ export function buildPaymentResponseHeader(
   return base64urlEncode(JSON.stringify({ ok, txSignature }));
 }
 
-// ---------------------------------------------------------------------------
-// On-chain verification
-// ---------------------------------------------------------------------------
-
 export type VerifyResult =
   | { ok: true; creatorDelta: bigint; platformDelta: bigint; price: bigint }
   | { ok: false; status: number; error: string };
 
-/**
- * Pure verification: caller fetches the parsed tx, we walk it.
- * Confirms (1) tx invokes the Veloran program, (2) recipient + platform
- * USDC ATAs received >= the program's split math, and (3) the claimed
- * payer's ATA is the source of funds.
- *
- * `recipientAddress` is the wallet that receives the 95% share. For
- * per-post unlocks that's the post's creator. For subscriptions it's
- * the creator being subscribed to. The split math is identical because
- * the on-chain `pay_for_content` instruction is generic.
- */
+export function transactionContainsMemo(
+  tx: ParsedTransactionWithMeta,
+  expectedMemo: string
+): boolean {
+  const instructions = tx.transaction.message.instructions as unknown[];
+  return instructions.some((ix) => {
+    if (!ix || typeof ix !== "object") return false;
+    const obj = ix as Record<string, unknown>;
+    if (obj.program === "spl-memo" && obj.parsed === expectedMemo) return true;
+    if (obj.programId instanceof PublicKey && obj.programId.toBase58() === "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr") {
+      const data = obj.data;
+      return typeof data === "string" && data === expectedMemo;
+    }
+    return false;
+  });
+}
+
 export function verifyOnChainPayment(args: {
   tx: ParsedTransactionWithMeta;
   recipientAddress: string;
   amountUsdc: number;
   expectedPayerAddress: string;
+  expectedMemo?: string;
 }): VerifyResult {
   const { tx, recipientAddress, amountUsdc, expectedPayerAddress } = args;
+
+  if (args.expectedMemo && !transactionContainsMemo(tx, args.expectedMemo)) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Transaction memo does not match payment intent",
+    };
+  }
 
   if (tx.meta?.err) {
     return { ok: false, status: 400, error: "Transaction failed on-chain" };
   }
 
-  // Compute expected ATAs
   const payerPk = new PublicKey(expectedPayerAddress);
   const recipientPk = new PublicKey(recipientAddress);
-  const recipientAta = getAssociatedTokenAddressSync(
-    USDC_DEVNET_MINT,
-    recipientPk
-  ).toBase58();
-  const payerAta = getAssociatedTokenAddressSync(
-    USDC_DEVNET_MINT,
-    payerPk
-  ).toBase58();
-  const platformAta = getAssociatedTokenAddressSync(
-    USDC_DEVNET_MINT,
-    VELORAN_TREASURY
-  ).toBase58();
+  const recipientAta = getAssociatedTokenAddressSync(USDC_MINT, recipientPk).toBase58();
+  const payerAta = getAssociatedTokenAddressSync(USDC_MINT, payerPk).toBase58();
+  const platformAta = getAssociatedTokenAddressSync(USDC_MINT, VELORAN_TREASURY).toBase58();
 
   const accountKeys = tx.transaction.message.accountKeys.map((k) =>
     k.pubkey.toBase58()
@@ -228,7 +231,7 @@ export function verifyOnChainPayment(args: {
     const entry = arr.find(
       (b) =>
         b.accountIndex === accountIndex &&
-        b.mint === USDC_DEVNET_MINT.toBase58() &&
+        b.mint === USDC_MINT.toBase58() &&
         b.owner === owner
     );
     return entry ? BigInt(entry.uiTokenAmount.amount) : 0n;
@@ -238,18 +241,10 @@ export function verifyOnChainPayment(args: {
   const platformAtaIdx = accountKeys.indexOf(platformAta);
   const payerAtaIdx = accountKeys.indexOf(payerAta);
   if (recipientAtaIdx === -1) {
-    return {
-      ok: false,
-      status: 400,
-      error: "Recipient USDC account not in transaction",
-    };
+    return { ok: false, status: 400, error: "Recipient USDC account not in transaction" };
   }
   if (platformAtaIdx === -1) {
-    return {
-      ok: false,
-      status: 400,
-      error: "Platform USDC account not in transaction",
-    };
+    return { ok: false, status: 400, error: "Platform USDC account not in transaction" };
   }
 
   const price = BigInt(amountUsdc);
@@ -285,7 +280,6 @@ export function verifyOnChainPayment(args: {
     };
   }
 
-  // Claimed payer must actually be the source of funds.
   if (payerAtaIdx === -1) {
     return {
       ok: false,

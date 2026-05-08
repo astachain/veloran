@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getServerConnection } from "@/lib/solana";
+import { createPaymentIntent, getUsablePaymentIntent } from "@/lib/payment-intents";
 import {
   buildPaymentRequirements,
   buildPaymentResponseHeader,
@@ -11,16 +13,10 @@ import {
   X402_VERSION,
 } from "@/lib/x402";
 
+export const dynamic = "force-dynamic";
+
 type Params = { params: Promise<{ slug: string }> };
 
-/**
- * GET /api/x402/[slug]
- *
- * Veloran's x402-style endpoint. Without a valid X-PAYMENT header it
- * returns HTTP 402 + payment requirements. With one, it verifies the
- * on-chain tx (program invocation + 95/5 split + payer match) and
- * returns the content. Stateless — no cookies.
- */
 export async function GET(req: NextRequest, { params }: Params) {
   const { slug } = await params;
 
@@ -36,9 +32,7 @@ export async function GET(req: NextRequest, { params }: Params) {
       creator: { select: { solanaAddress: true } },
     },
   });
-  if (!post) {
-    return NextResponse.json({ error: "Post not found" }, { status: 404 });
-  }
+  if (!post) return NextResponse.json({ error: "Post not found" }, { status: 404 });
   if (!post.creator.solanaAddress) {
     return NextResponse.json(
       { error: "Creator wallet missing" },
@@ -46,16 +40,23 @@ export async function GET(req: NextRequest, { params }: Params) {
     );
   }
 
-  const requirements = buildPaymentRequirements({
-    slug: post.slug,
-    priceUsdc: post.priceUsdc,
-    preview: post.preview,
-    creator: { solanaAddress: post.creator.solanaAddress },
-  });
-
-  // No payment header → return the 402 challenge.
   const headerValue = req.headers.get("x-payment");
   if (!headerValue) {
+    const intent = await createPaymentIntent({
+      postId: post.id,
+      slug: post.slug,
+      amountUsdc: post.priceUsdc,
+      creatorAddress: post.creator.solanaAddress,
+    });
+    const requirements = buildPaymentRequirements(
+      {
+        slug: post.slug,
+        priceUsdc: post.priceUsdc,
+        preview: post.preview,
+        creator: { solanaAddress: post.creator.solanaAddress },
+      },
+      intent
+    );
     return NextResponse.json(
       { x402Version: X402_VERSION, accepts: [requirements] },
       { status: 402 }
@@ -81,13 +82,30 @@ export async function GET(req: NextRequest, { params }: Params) {
       { status: 400 }
     );
   }
+  if (!parsed.intentId) {
+    return NextResponse.json(
+      { error: "Missing payment intent ID" },
+      { status: 400 }
+    );
+  }
 
-  // Idempotent: same signature → return content directly.
-  const existing = await prisma.unlock.findUnique({
+  const intent = await getUsablePaymentIntent({
+    intentId: parsed.intentId,
+    postId: post.id,
+    payerAddress: parsed.payerAddress,
+  });
+  if ("error" in intent) {
+    return NextResponse.json({ error: intent.error }, { status: intent.status });
+  }
+
+  const existingReceipt = await prisma.paymentReceipt.findUnique({
     where: { txSignature: parsed.txSignature },
   });
-  if (existing) {
-    return ok(post, parsed.txSignature);
+  if (existingReceipt) {
+    return NextResponse.json(
+      { error: "Payment signature already consumed" },
+      { status: 409 }
+    );
   }
 
   const connection = getServerConnection();
@@ -104,24 +122,50 @@ export async function GET(req: NextRequest, { params }: Params) {
 
   const result = verifyOnChainPayment({
     tx,
-    recipientAddress: post.creator.solanaAddress,
-    amountUsdc: post.priceUsdc,
+    recipientAddress: intent.creatorAddress,
+    amountUsdc: intent.amountUsdc,
     expectedPayerAddress: parsed.payerAddress,
+    expectedMemo: intent.memo,
   });
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
 
-  await prisma.unlock.create({
-    data: {
-      postId: post.id,
-      readerCreatorId: null,
-      readerAddress: parsed.payerAddress,
-      readerType: "agent",
-      amountUsdc: post.priceUsdc,
-      txSignature: parsed.txSignature,
-    },
-  });
+  try {
+    await prisma.$transaction([
+      prisma.paymentReceipt.create({
+        data: {
+          intentId: intent.id,
+          postId: post.id,
+          readerAddress: parsed.payerAddress,
+          amountUsdc: intent.amountUsdc,
+          txSignature: parsed.txSignature,
+        },
+      }),
+      prisma.unlock.create({
+        data: {
+          postId: post.id,
+          readerCreatorId: null,
+          readerAddress: parsed.payerAddress,
+          readerType: "agent",
+          amountUsdc: intent.amountUsdc,
+          txSignature: parsed.txSignature,
+        },
+      }),
+      prisma.paymentIntent.update({
+        where: { id: intent.id },
+        data: { consumedAt: new Date() },
+      }),
+    ]);
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return NextResponse.json(
+        { error: "Payment signature or intent already consumed" },
+        { status: 409 }
+      );
+    }
+    throw e;
+  }
 
   return ok(post, parsed.txSignature);
 }

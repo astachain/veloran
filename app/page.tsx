@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LoginButton } from "@/components/LoginButton";
+import { SOLANA_NETWORK } from "@/lib/solana";
 
 export default function Home() {
   return (
@@ -14,7 +15,7 @@ export default function Home() {
         <div className="relative max-w-3xl mx-auto text-center">
           <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-violet-400">
             <span className="h-1.5 w-1.5 rounded-full bg-violet-400 animate-pulse" />
-            Veloran · Solana devnet
+            Veloran · Solana {SOLANA_NETWORK}
           </p>
           <h1 className="mt-8 text-5xl sm:text-6xl font-semibold leading-[1.05] tracking-tight">
             The payment and access layer for the{" "}
@@ -204,7 +205,7 @@ export default function Home() {
             Publish your first paid endpoint.
           </h2>
           <p className="mt-3 text-neutral-400">
-            Devnet only · USDC test tokens, not real funds.
+            Active network: {SOLANA_NETWORK}. Use test funds on devnet; real USDC only after mainnet hardening is complete.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
             <LoginButton />

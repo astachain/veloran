@@ -18,8 +18,9 @@ import {
   getAssociatedTokenAddressSync,
 } from "@solana/spl-token";
 import {
+  PRIVY_SOLANA_CHAIN,
   PUBLIC_RPC_URL,
-  USDC_DEVNET_MINT,
+  USDC_MINT,
   VELORAN_TREASURY,
 } from "@/lib/solana";
 import { buildPayForContentIx } from "@/lib/anchor-client";
@@ -105,15 +106,15 @@ export function SubscribeButton({
       const subscriber = new PublicKey(wallet.address);
       const creator = new PublicKey(creatorAddress);
       const subscriberAta = getAssociatedTokenAddressSync(
-        USDC_DEVNET_MINT,
+        USDC_MINT,
         subscriber
       );
       const creatorAta = getAssociatedTokenAddressSync(
-        USDC_DEVNET_MINT,
+        USDC_MINT,
         creator
       );
       const platformAta = getAssociatedTokenAddressSync(
-        USDC_DEVNET_MINT,
+        USDC_MINT,
         VELORAN_TREASURY
       );
 
@@ -124,13 +125,13 @@ export function SubscribeButton({
           subscriber,
           creatorAta,
           creator,
-          USDC_DEVNET_MINT
+          USDC_MINT
         ),
         createAssociatedTokenAccountIdempotentInstruction(
           subscriber,
           platformAta,
           VELORAN_TREASURY,
-          USDC_DEVNET_MINT
+          USDC_MINT
         ),
         buildPayForContentIx(
           {
@@ -138,7 +139,7 @@ export function SubscribeButton({
             readerAta: subscriberAta,
             creatorAta,
             platformAta,
-            mint: USDC_DEVNET_MINT,
+            mint: USDC_MINT,
           },
           BigInt(priceUsdc)
         ),
@@ -157,7 +158,7 @@ export function SubscribeButton({
       const { signature } = await signAndSendTransaction({
         transaction: versionedTx.serialize(),
         wallet,
-        chain: "solana:devnet",
+        chain: PRIVY_SOLANA_CHAIN,
       });
       const sigB58 = bytesToBase58(signature);
       setTxSig(sigB58);

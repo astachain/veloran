@@ -135,7 +135,7 @@ import { Connection, TransactionMessage, VersionedTransaction } from "@solana/we
 import { buildPayForContentIx } from "@/lib/anchor-client";
 
 const ix = buildPayForContentIx(
-  { reader, readerAta, creatorAta, platformAta, mint: USDC_DEVNET_MINT },
+  { reader, readerAta, creatorAta, platformAta, mint: USDC_MINT },
   BigInt(challenge.maxAmountRequired)
 );
 

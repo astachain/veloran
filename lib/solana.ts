@@ -1,39 +1,90 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 
-// Circle's official devnet USDC mint
-export const USDC_DEVNET_MINT = new PublicKey(
-  "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
+export type SolanaNetwork = "devnet" | "mainnet-beta";
+
+export const SOLANA_NETWORK = resolveNetwork(
+  process.env.NEXT_PUBLIC_SOLANA_NETWORK
 );
 
-// Veloran 95/5-split program — deployed to devnet 2026-04-26
-export const VELORAN_PROGRAM_ID = new PublicKey(
-  "2CtnLfdePpjitQQLtHrQAsa74RXLiubKfSdJmjy2pGcS"
-);
+const DEFAULTS = {
+  devnet: {
+    rpcUrl: "https://api.devnet.solana.com",
+    usdcMint: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+    programId: "2CtnLfdePpjitQQLtHrQAsa74RXLiubKfSdJmjy2pGcS",
+    treasury: "DgGYE7boZTEwrotFsYS9bFYsrgpz8TC76cXCZ8GcFKnP",
+  },
+  "mainnet-beta": {
+    rpcUrl: "https://api.mainnet-beta.solana.com",
+    usdcMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    programId: "",
+    treasury: "",
+  },
+} satisfies Record<SolanaNetwork, Record<string, string>>;
 
-// Veloran treasury wallet (receives the 5% platform cut)
-// Hardcoded in the Rust program; must match.
-export const VELORAN_TREASURY = new PublicKey(
-  "DgGYE7boZTEwrotFsYS9bFYsrgpz8TC76cXCZ8GcFKnP"
-);
-
-const PUBLIC_DEVNET_FALLBACK = "https://api.devnet.solana.com";
-
-function resolveRpcUrl(envValue: string | undefined): string {
-  if (!envValue || envValue.includes("PASTE_YOUR_HELIUS_KEY_HERE")) {
-    return PUBLIC_DEVNET_FALLBACK;
-  }
-  return envValue;
+function resolveNetwork(value: string | undefined): SolanaNetwork {
+  if (!value) return "devnet";
+  if (value === "devnet" || value === "mainnet-beta") return value;
+  throw new Error(
+    `Invalid NEXT_PUBLIC_SOLANA_NETWORK='${value}'. Use 'devnet' or 'mainnet-beta'.`
+  );
 }
 
-/** Browser-side RPC URL (public Helius URL or fallback) */
-export const PUBLIC_RPC_URL = resolveRpcUrl(
-  process.env.NEXT_PUBLIC_HELIUS_RPC_URL
+function isUnset(value: string | undefined): boolean {
+  return !value || value.trim() === "" || value.includes("PASTE_");
+}
+
+function requiredEnv(name: string, fallback?: string): string {
+  const value = process.env[name];
+  if (!isUnset(value)) return value!.trim();
+  if (SOLANA_NETWORK === "devnet" && fallback) return fallback;
+  throw new Error(
+    `Missing ${name} for ${SOLANA_NETWORK}. Refusing to boot with incomplete payment config.`
+  );
+}
+
+function optionalRpcEnv(primary: string, fallbackName: string | undefined): string | undefined {
+  const primaryValue = process.env[primary];
+  if (!isUnset(primaryValue)) return primaryValue!.trim();
+  if (fallbackName) {
+    const fallbackValue = process.env[fallbackName];
+    if (!isUnset(fallbackValue)) return fallbackValue!.trim();
+  }
+  return undefined;
+}
+
+/** Browser-side RPC URL. Keep browser keys intentionally public and scoped. */
+export const PUBLIC_RPC_URL =
+  optionalRpcEnv("NEXT_PUBLIC_SOLANA_RPC_URL", "NEXT_PUBLIC_HELIUS_RPC_URL") ??
+  DEFAULTS[SOLANA_NETWORK].rpcUrl;
+
+/** Server-side RPC URL. Prefer private server URL when present. */
+export const SERVER_RPC_URL =
+  optionalRpcEnv("SERVER_SOLANA_RPC_URL", "NEXT_PUBLIC_SOLANA_RPC_URL") ??
+  PUBLIC_RPC_URL;
+
+/** Active USDC mint for the configured network. */
+export const USDC_MINT = new PublicKey(
+  requiredEnv("NEXT_PUBLIC_USDC_MINT", DEFAULTS[SOLANA_NETWORK].usdcMint)
 );
 
-/** Server-side RPC URL — same source for now */
-export const SERVER_RPC_URL = resolveRpcUrl(
-  process.env.NEXT_PUBLIC_HELIUS_RPC_URL
+/** Veloran 95/5-split program for the configured network. */
+export const VELORAN_PROGRAM_ID = new PublicKey(
+  requiredEnv(
+    "NEXT_PUBLIC_VELORAN_PROGRAM_ID",
+    DEFAULTS[SOLANA_NETWORK].programId
+  )
 );
+
+/** Veloran treasury wallet. Public address, not a signing secret. */
+export const VELORAN_TREASURY = new PublicKey(
+  requiredEnv(
+    "NEXT_PUBLIC_VELORAN_TREASURY",
+    process.env.VELORAN_TREASURY ?? DEFAULTS[SOLANA_NETWORK].treasury
+  )
+);
+
+export const VELORAN_X402_NETWORK = `solana-${SOLANA_NETWORK}`;
+export const PRIVY_SOLANA_CHAIN = `solana:${SOLANA_NETWORK}`;
 
 let cachedConn: Connection | null = null;
 export function getServerConnection(): Connection {

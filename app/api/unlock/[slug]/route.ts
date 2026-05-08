@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { verifyPrivyToken } from "@/lib/privy-server";
 import { getServerConnection } from "@/lib/solana";
+import { getUsablePaymentIntent } from "@/lib/payment-intents";
 import { verifyOnChainPayment } from "@/lib/x402";
 import {
   signUnlockToken,
@@ -9,10 +11,7 @@ import {
   UNLOCK_COOKIE_MAX_AGE,
 } from "@/lib/content-gate";
 
-function withUnlockCookie(
-  res: NextResponse,
-  slug: string
-): NextResponse {
+function withUnlockCookie(res: NextResponse, slug: string): NextResponse {
   res.cookies.set({
     name: unlockCookieName(slug),
     value: signUnlockToken(slug),
@@ -27,21 +26,11 @@ function withUnlockCookie(
 
 type Params = { params: Promise<{ slug: string }> };
 
-/**
- * POST /api/unlock/[slug]
- * Body: { txSignature: string }
- *
- * Human path. Privy-authenticated. Verifies the on-chain split via
- * lib/x402.ts (the same helper /api/x402/[slug] uses for agents).
- */
 export async function POST(req: NextRequest, { params }: Params) {
   const { slug } = await params;
 
-  // 1. Authenticate reader via Privy
   const claims = await verifyPrivyToken(req.headers.get("authorization"));
-  if (!claims) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!claims) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const reader = await prisma.creator.findUnique({
     where: { privyUserId: claims.userId },
@@ -53,29 +42,26 @@ export async function POST(req: NextRequest, { params }: Params) {
     );
   }
 
-  // 2. Body
-  let body: { txSignature?: string };
+  let body: { txSignature?: string; intentId?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
   const txSignature = body.txSignature?.trim();
+  const intentId = body.intentId?.trim();
   if (!txSignature) {
-    return NextResponse.json(
-      { error: "Missing txSignature" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Missing txSignature" }, { status: 400 });
+  }
+  if (!intentId) {
+    return NextResponse.json({ error: "Missing payment intent ID" }, { status: 400 });
   }
 
-  // 3. Look up the post + creator
   const post = await prisma.post.findUnique({
     where: { slug },
     include: { creator: { select: { id: true, solanaAddress: true } } },
   });
-  if (!post) {
-    return NextResponse.json({ error: "Post not found" }, { status: 404 });
-  }
+  if (!post) return NextResponse.json({ error: "Post not found" }, { status: 404 });
   if (!post.creator.solanaAddress) {
     return NextResponse.json(
       { error: "Creator wallet missing" },
@@ -83,51 +69,80 @@ export async function POST(req: NextRequest, { params }: Params) {
     );
   }
 
-  // Already unlocked? Idempotent return.
-  const existing = await prisma.unlock.findUnique({
+  const intent = await getUsablePaymentIntent({
+    intentId,
+    postId: post.id,
+    payerAddress: reader.solanaAddress,
+  });
+  if ("error" in intent) {
+    return NextResponse.json({ error: intent.error }, { status: intent.status });
+  }
+
+  const existingReceipt = await prisma.paymentReceipt.findUnique({
     where: { txSignature },
   });
-  if (existing) {
-    return withUnlockCookie(
-      NextResponse.json({ ok: true, content: post.content }),
-      slug
+  if (existingReceipt) {
+    return NextResponse.json(
+      { error: "Payment signature already consumed" },
+      { status: 409 }
     );
   }
 
-  // 4. Fetch + verify the on-chain transaction via shared helper
   const connection = getServerConnection();
   const tx = await connection.getParsedTransaction(txSignature, {
     commitment: "confirmed",
     maxSupportedTransactionVersion: 0,
   });
   if (!tx) {
-    return NextResponse.json(
-      { error: "Transaction not found" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Transaction not found" }, { status: 400 });
   }
 
   const result = verifyOnChainPayment({
     tx,
-    recipientAddress: post.creator.solanaAddress,
-    amountUsdc: post.priceUsdc,
+    recipientAddress: intent.creatorAddress,
+    amountUsdc: intent.amountUsdc,
     expectedPayerAddress: reader.solanaAddress,
+    expectedMemo: intent.memo,
   });
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
 
-  // 5. Persist unlock
-  await prisma.unlock.create({
-    data: {
-      postId: post.id,
-      readerCreatorId: reader.id,
-      readerAddress: reader.solanaAddress,
-      readerType: "human",
-      amountUsdc: post.priceUsdc,
-      txSignature,
-    },
-  });
+  try {
+    await prisma.$transaction([
+      prisma.paymentReceipt.create({
+        data: {
+          intentId: intent.id,
+          postId: post.id,
+          readerAddress: reader.solanaAddress,
+          amountUsdc: intent.amountUsdc,
+          txSignature,
+        },
+      }),
+      prisma.unlock.create({
+        data: {
+          postId: post.id,
+          readerCreatorId: reader.id,
+          readerAddress: reader.solanaAddress,
+          readerType: "human",
+          amountUsdc: intent.amountUsdc,
+          txSignature,
+        },
+      }),
+      prisma.paymentIntent.update({
+        where: { id: intent.id },
+        data: { consumedAt: new Date() },
+      }),
+    ]);
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return NextResponse.json(
+        { error: "Payment signature or intent already consumed" },
+        { status: 409 }
+      );
+    }
+    throw e;
+  }
 
   return withUnlockCookie(
     NextResponse.json({ ok: true, content: post.content }),

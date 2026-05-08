@@ -18,7 +18,7 @@ import {
   getAssociatedTokenAddressSync,
 } from "@solana/spl-token";
 import Link from "next/link";
-import { PUBLIC_RPC_URL, USDC_DEVNET_MINT } from "@/lib/solana";
+import { PRIVY_SOLANA_CHAIN, PUBLIC_RPC_URL, USDC_MINT } from "@/lib/solana";
 
 const USDC_DECIMALS = 6;
 
@@ -65,9 +65,9 @@ export function SendUsdcClient() {
     try {
       setStatus("sending");
       const sender = new PublicKey(wallet.address);
-      const senderAta = getAssociatedTokenAddressSync(USDC_DEVNET_MINT, sender);
+      const senderAta = getAssociatedTokenAddressSync(USDC_MINT, sender);
       const recipientAta = getAssociatedTokenAddressSync(
-        USDC_DEVNET_MINT,
+        USDC_MINT,
         recipientPk
       );
 
@@ -76,11 +76,11 @@ export function SendUsdcClient() {
           sender,
           recipientAta,
           recipientPk,
-          USDC_DEVNET_MINT
+          USDC_MINT
         ),
         createTransferCheckedInstruction(
           senderAta,
-          USDC_DEVNET_MINT,
+          USDC_MINT,
           recipientAta,
           sender,
           BigInt(microUsdc),
@@ -101,7 +101,7 @@ export function SendUsdcClient() {
       const { signature: sigBytes } = await signAndSendTransaction({
         transaction: tx.serialize(),
         wallet,
-        chain: "solana:devnet",
+        chain: PRIVY_SOLANA_CHAIN,
       });
 
       const sigB58 = bytesToBase58(sigBytes);

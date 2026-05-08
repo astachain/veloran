@@ -49,6 +49,42 @@ model Post {
   creator        Creator  @relation(fields: [creatorId], references: [id])
 
   unlocks        Unlock[]
+  paymentIntents PaymentIntent[]
+}
+
+// A single-use payment challenge binding a future tx to one resource + payer.
+model PaymentIntent {
+  id             String   @id @default(cuid())
+  postId         String
+  post           Post     @relation(fields: [postId], references: [id])
+  resource       String
+  amountUsdc     Int
+  creatorAddress String
+  payerAddress   String?
+  nonce          String   @unique
+  memo           String
+  expiresAt      DateTime
+  consumedAt     DateTime?
+  createdAt      DateTime @default(now())
+
+  receipts       PaymentReceipt[]
+
+  @@index([postId, expiresAt])
+}
+
+// One row per consumed Solana tx signature. This is the production replay lock.
+model PaymentReceipt {
+  id             String   @id @default(cuid())
+  intentId       String
+  intent         PaymentIntent @relation(fields: [intentId], references: [id])
+  postId         String
+  readerAddress  String
+  amountUsdc     Int
+  txSignature    String   @unique
+  createdAt      DateTime @default(now())
+
+  @@index([intentId])
+  @@index([postId, readerAddress])
 }
 
 // A creator's subscription pricing. One row per creator. Either price can

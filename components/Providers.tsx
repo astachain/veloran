@@ -4,7 +4,7 @@ import { PrivyProvider } from "@privy-io/react-auth";
 import { toSolanaWalletConnectors } from "@privy-io/react-auth/solana";
 import { createSolanaRpc, createSolanaRpcSubscriptions } from "@solana/kit";
 import { ReactNode, useMemo } from "react";
-import { PUBLIC_RPC_URL } from "@/lib/solana";
+import { PRIVY_SOLANA_CHAIN, PUBLIC_RPC_URL } from "@/lib/solana";
 
 // Derive a websocket URL from the HTTP RPC URL (Helius + public devnet
 // both expose the same path on the wss:// scheme).
@@ -18,7 +18,7 @@ export function Providers({ children }: { children: ReactNode }) {
 
   const solanaRpcs = useMemo(
     () => ({
-      "solana:devnet": {
+      [PRIVY_SOLANA_CHAIN]: {
         rpc: createSolanaRpc(PUBLIC_RPC_URL),
         rpcSubscriptions: createSolanaRpcSubscriptions(toWsUrl(PUBLIC_RPC_URL)),
         blockExplorerUrl: "https://solscan.io",

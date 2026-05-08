@@ -31,9 +31,10 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import { buildPayForContentIx } from "../lib/anchor-client";
+import { buildPaymentMemoIx } from "../lib/payment-memo";
 import {
   PUBLIC_RPC_URL,
-  USDC_DEVNET_MINT,
+  USDC_MINT,
 } from "../lib/solana";
 import {
   base64urlEncode,
@@ -151,9 +152,13 @@ async function main() {
   const reader = agent.publicKey;
   const creator = new PublicKey(reqs.payTo.creator);
   const platform = new PublicKey(reqs.payTo.platform);
-  const readerAta = getAssociatedTokenAddressSync(USDC_DEVNET_MINT, reader);
+  const readerAta = getAssociatedTokenAddressSync(USDC_MINT, reader);
   const creatorAta = new PublicKey(reqs.payTo.creatorAta);
   const platformAta = new PublicKey(reqs.payTo.platformAta);
+
+  if (!reqs.extra.intentId || !reqs.extra.memo) {
+    die("Server challenge did not include a payment intent + memo");
+  }
 
   const ixs = [
     // Make sure the agent's own USDC ATA exists. The Anchor program
@@ -163,27 +168,28 @@ async function main() {
       reader,
       readerAta,
       reader,
-      USDC_DEVNET_MINT
+      USDC_MINT
     ),
     createAssociatedTokenAccountIdempotentInstruction(
       reader,
       creatorAta,
       creator,
-      USDC_DEVNET_MINT
+      USDC_MINT
     ),
     createAssociatedTokenAccountIdempotentInstruction(
       reader,
       platformAta,
       platform,
-      USDC_DEVNET_MINT
+      USDC_MINT
     ),
+    buildPaymentMemoIx(reqs.extra.intentId),
     buildPayForContentIx(
       {
         reader,
         readerAta,
         creatorAta,
         platformAta,
-        mint: USDC_DEVNET_MINT,
+        mint: USDC_MINT,
       },
       amountMicro
     ),
@@ -230,6 +236,7 @@ async function main() {
     network: VELORAN_X402_NETWORK,
     txSignature: signature,
     payerAddress: reader.toBase58(),
+    intentId: reqs.extra.intentId,
   });
   const xPayment = base64urlEncode(headerJson);
 

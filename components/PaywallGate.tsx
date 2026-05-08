@@ -18,11 +18,13 @@ import {
 } from "@solana/spl-token";
 import Link from "next/link";
 import {
+  PRIVY_SOLANA_CHAIN,
   PUBLIC_RPC_URL,
-  USDC_DEVNET_MINT,
+  USDC_MINT,
   VELORAN_TREASURY,
 } from "@/lib/solana";
 import { buildPayForContentIx } from "@/lib/anchor-client";
+import { buildPaymentMemoIx } from "@/lib/payment-memo";
 import { microUsdcToUsd } from "@/lib/slug";
 
 type Props = {
@@ -86,18 +88,33 @@ export function PaywallGate({
     try {
       setStatus("paying");
 
+      const token = await getAccessToken();
+      if (!token) throw new Error("Missing auth token");
+      const intentRes = await fetch(`/api/payment-intents/${slug}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const intent = (await intentRes.json()) as {
+        id?: string;
+        memo?: string;
+        error?: string;
+      };
+      if (!intentRes.ok || !intent.id || !intent.memo) {
+        throw new Error(intent.error ?? "Failed to create payment intent");
+      }
+
       const reader = new PublicKey(wallet.address);
       const creator = new PublicKey(creatorAddress);
       const readerAta = getAssociatedTokenAddressSync(
-        USDC_DEVNET_MINT,
+        USDC_MINT,
         reader
       );
       const creatorAta = getAssociatedTokenAddressSync(
-        USDC_DEVNET_MINT,
+        USDC_MINT,
         creator
       );
       const platformAta = getAssociatedTokenAddressSync(
-        USDC_DEVNET_MINT,
+        USDC_MINT,
         VELORAN_TREASURY
       );
 
@@ -109,21 +126,22 @@ export function PaywallGate({
           reader,
           creatorAta,
           creator,
-          USDC_DEVNET_MINT
+          USDC_MINT
         ),
         createAssociatedTokenAccountIdempotentInstruction(
           reader,
           platformAta,
           VELORAN_TREASURY,
-          USDC_DEVNET_MINT
+          USDC_MINT
         ),
+        buildPaymentMemoIx(intent.id),
         buildPayForContentIx(
           {
             reader,
             readerAta,
             creatorAta,
             platformAta,
-            mint: USDC_DEVNET_MINT,
+            mint: USDC_MINT,
           },
           BigInt(priceUsdc)
         ),
@@ -142,7 +160,7 @@ export function PaywallGate({
       const { signature } = await signAndSendTransaction({
         transaction: versionedTx.serialize(),
         wallet,
-        chain: "solana:devnet",
+        chain: PRIVY_SOLANA_CHAIN,
       });
       const sigB58 = bytesToBase58(signature);
       setTxSig(sigB58);
@@ -159,14 +177,13 @@ export function PaywallGate({
         "confirmed"
       );
 
-      const token = await getAccessToken();
       const res = await fetch(`/api/unlock/${slug}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ txSignature: sigB58 }),
+        body: JSON.stringify({ txSignature: sigB58, intentId: intent.id }),
       });
       const body = await res.json();
       if (!res.ok) {

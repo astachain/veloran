@@ -8,6 +8,7 @@
     "postinstall": "prisma generate",
     "start": "next start",
     "lint": "eslint",
+    "test:payment-safety": "tsx scripts/payment-safety-smoke.ts",
     "ai-reader": "tsx scripts/ai-reader.ts"
   },
   "dependencies": {
