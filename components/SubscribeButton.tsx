@@ -118,8 +118,8 @@ export function SubscribeButton({
         VELORAN_TREASURY
       );
 
-      // Same flow as PaywallGate: idempotent ATA creates, then the
-      // generic pay_for_content with the tier price.
+      // Same flow as PaywallGate: safe ATA creation, then the generic
+      // pay_for_content with the tier price.
       const ixs = [
         createAssociatedTokenAccountIdempotentInstruction(
           subscriber,

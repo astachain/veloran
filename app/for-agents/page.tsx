@@ -201,8 +201,12 @@ X-PAYMENT-RESPONSE: <base64url of { "ok": true, "txSignature": "..." }>
 }`}
         />
         <p className="mt-3 text-sm text-neutral-500">
-          The same <code>txSignature</code> is idempotent — replay it and you
-          get the same content back without paying twice.
+          Replay rejected: re-sending the same <code>X-PAYMENT</code> header
+          or any header pointing at a consumed intent returns HTTP 409 with{" "}
+          <code>{`{ "error": "Payment intent already consumed" }`}</code>.
+          Each <code>pay_for_content</code> transaction settles exactly one
+          intent and may unlock the resource exactly once. To unlock again,
+          request a fresh 402 challenge.
         </p>
       </Section>
 

@@ -128,9 +128,10 @@ export default function DemoPage() {
             We literally cannot take more than 5%.
           </Bullet>
           <Bullet>
-            Idempotent verification: re-using the same{" "}
-            <code>txSignature</code> returns the same content without
-            double-charging.
+            Single-use payments: each successful <code>pay_for_content</code>{" "}
+            consumes exactly one <code>PaymentIntent</code>. Replay returns HTTP
+            409. Unique <code>PaymentReceipt.txSignature</code> adds a second
+            guard at the database layer.
           </Bullet>
         </ul>
       </Section>

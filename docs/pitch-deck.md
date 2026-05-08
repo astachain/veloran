@@ -126,7 +126,7 @@
 **Bullets:**
 - ✅ Anchor program deployed — `2CtnLfdePpjitQQLtHrQAsa74RXLiubKfSdJmjy2pGcS`
 - ✅ Human flow + AI-agent-style HTTP 402 flow both verified on the live URL
-- ✅ Subscription tiers, on-chain split, idempotent settlements
+- ✅ Subscription tiers, on-chain split, single-use payment receipts
 - ✅ Open source: `github.com/astachain/veloran`
 
 **Footer:** Watch the 2:30 demo video at the live URL.

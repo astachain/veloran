@@ -111,7 +111,7 @@ These were resolved through grilling sessions with the user. Treat them as fixed
 ### API routes (don't change — verified working)
 - `app/api/unlock/[slug]/route.ts` — Privy-authed human unlock + cookie set
 - `app/api/x402/[slug]/route.ts` — agent x402 endpoint (HTTP 402 + X-PAYMENT)
-- `app/api/subscriptions/[creatorId]/route.ts` — subscribe + idempotent verify
+- `app/api/subscriptions/[creatorId]/route.ts` — subscribe + single-use payment verify
 - `app/api/subscription-tiers/route.ts` — seller tier upsert
 - `app/api/posts/route.ts` — post CRUD (POST + GET)
 - `app/api/posts/[id]/route.ts` — DELETE post (owner-only, cascades unlocks)

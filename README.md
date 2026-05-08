@@ -25,7 +25,7 @@ Built for the Solana Frontier Hackathon, May 2026.
 2. Human buyers open the public URL and unlock with Privy checkout.
 3. AI agents call `/api/x402/<slug>`, receive HTTP 402 payment instructions, sign a Solana transaction, then re-request with `X-PAYMENT`.
 4. The Anchor program transfers 95% to the seller and 5% to Veloran treasury in one atomic SPL-token settlement.
-5. The app verifies the transaction and reveals the gated response.
+5. The app verifies the transaction and reveals the gated response. Each paid request creates a server-bound `PaymentIntent` with a 15-minute TTL and a memo of the form `veloran:intent:<nonce>`. The buyer's transaction must include that memo as a Memo program instruction. The server consumes the intent on the first successful unlock; replays return 409.
 
 Closing line:
 

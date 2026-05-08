@@ -118,9 +118,9 @@ export function PaywallGate({
         VELORAN_TREASURY
       );
 
-      // Build instructions: idempotently create creator + platform USDC
-      // ATAs (reader pays rent if they're missing), then call our
-      // Anchor program to do the 95/5 split atomically.
+      // Build instructions: safely create creator + platform USDC ATAs if
+      // missing (reader pays rent if needed), then call our Anchor program
+      // to do the 95/5 split atomically.
       const ixs = [
         createAssociatedTokenAccountIdempotentInstruction(
           reader,
