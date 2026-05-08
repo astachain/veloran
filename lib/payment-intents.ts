@@ -1,20 +1,14 @@
 import { randomBytes } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { paymentMemoForIntent } from "@/lib/payment-memo";
+import {
+  validatePaymentIntentRecord,
+  type PaymentIntentContext,
+} from "@/lib/payment-intent-validation";
+
+export { validatePaymentIntentRecord, type PaymentIntentContext };
 
 const PAYMENT_INTENT_TTL_MS = 15 * 60 * 1000;
-
-export type PaymentIntentContext = {
-  id: string;
-  postId: string;
-  resource: string;
-  amountUsdc: number;
-  creatorAddress: string;
-  payerAddress: string | null;
-  memo: string;
-  expiresAt: Date;
-  consumedAt: Date | null;
-};
 
 export async function createPaymentIntent(args: {
   postId: string;
@@ -49,17 +43,5 @@ export async function getUsablePaymentIntent(args: {
     where: { id: args.intentId },
   });
   if (!intent) return { error: "Payment intent not found", status: 400 };
-  if (intent.postId !== args.postId) {
-    return { error: "Payment intent is for a different resource", status: 400 };
-  }
-  if (intent.expiresAt.getTime() < Date.now()) {
-    return { error: "Payment intent expired", status: 400 };
-  }
-  if (intent.consumedAt) {
-    return { error: "Payment intent already consumed", status: 409 };
-  }
-  if (intent.payerAddress && intent.payerAddress !== args.payerAddress) {
-    return { error: "Payment intent is bound to a different payer", status: 400 };
-  }
-  return intent;
+  return validatePaymentIntentRecord(intent, args);
 }

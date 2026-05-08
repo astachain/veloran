@@ -8,7 +8,9 @@
     "postinstall": "prisma generate",
     "start": "next start",
     "lint": "eslint",
+    "test": "npm run test:payment-safety && npm run test:payment-verification",
     "test:payment-safety": "tsx scripts/payment-safety-smoke.ts",
+    "test:payment-verification": "tsx scripts/payment-verification-tests.ts",
     "ai-reader": "tsx scripts/ai-reader.ts"
   },
   "dependencies": {

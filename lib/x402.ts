@@ -182,6 +182,32 @@ export function transactionContainsMemo(
   });
 }
 
+export function transactionInvokesProgram(
+  tx: ParsedTransactionWithMeta,
+  programId: PublicKey
+): boolean {
+  const accountKeys = tx.transaction.message.accountKeys.map((k) =>
+    k.pubkey.toBase58()
+  );
+  const expectedProgramId = programId.toBase58();
+  const instructions = tx.transaction.message.instructions as unknown[];
+
+  return instructions.some((ix) => {
+    if (!ix || typeof ix !== "object") return false;
+    const obj = ix as Record<string, unknown>;
+    if (obj.programId instanceof PublicKey) {
+      return obj.programId.toBase58() === expectedProgramId;
+    }
+    if (typeof obj.programId === "string") {
+      return obj.programId === expectedProgramId;
+    }
+    if (typeof obj.programIdIndex === "number") {
+      return accountKeys[obj.programIdIndex] === expectedProgramId;
+    }
+    return false;
+  });
+}
+
 export function verifyOnChainPayment(args: {
   tx: ParsedTransactionWithMeta;
   recipientAddress: string;
@@ -212,7 +238,7 @@ export function verifyOnChainPayment(args: {
   const accountKeys = tx.transaction.message.accountKeys.map((k) =>
     k.pubkey.toBase58()
   );
-  if (!accountKeys.includes(VELORAN_PROGRAM_ID.toBase58())) {
+  if (!transactionInvokesProgram(tx, VELORAN_PROGRAM_ID)) {
     return {
       ok: false,
       status: 400,
