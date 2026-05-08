@@ -31,7 +31,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import { buildPayForContentIx } from "../lib/anchor-client";
-import { buildPaymentMemoIx } from "../lib/payment-memo";
+import { buildMemoInstruction } from "../lib/payment-memo";
 import {
   PUBLIC_RPC_URL,
   USDC_MINT,
@@ -182,7 +182,7 @@ async function main() {
       platform,
       USDC_MINT
     ),
-    buildPaymentMemoIx(reqs.extra.intentId),
+    buildMemoInstruction(reqs.extra.memo),
     buildPayForContentIx(
       {
         reader,
@@ -263,10 +263,21 @@ async function main() {
   console.log();
   console.log(c.green("━━━ End ━━━\n"));
 
+  logStep("🛡️", "Replaying same X-PAYMENT header…");
+  const replayRes = await fetch(targetUrl, {
+    headers: { "X-PAYMENT": xPayment },
+  });
+  if (replayRes.status !== 409) {
+    die(
+      `Replay protection failed; expected 409, got ${replayRes.status}: ${await replayRes.text()}`
+    );
+  }
+  logStep("✅", `Replay rejected:  ${await replayRes.text()}`);
+
   console.log(
     c.dim(
       `Receipt: ${paidBody.txSignature}\n` +
-        `Replay this same signature anytime → server returns the same content idempotently.`
+        `Replay of the same signature was rejected as already consumed.`
     )
   );
 }

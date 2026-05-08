@@ -8,10 +8,14 @@ export function paymentMemoForIntent(intentId: string): string {
   return `veloran:intent:${intentId}`;
 }
 
-export function buildPaymentMemoIx(intentId: string): TransactionInstruction {
+export function buildMemoInstruction(memo: string): TransactionInstruction {
   return new TransactionInstruction({
     programId: MEMO_PROGRAM_ID,
     keys: [],
-    data: Buffer.from(paymentMemoForIntent(intentId), "utf8"),
+    data: Buffer.from(memo, "utf8"),
   });
+}
+
+export function buildPaymentMemoIx(intentId: string): TransactionInstruction {
+  return buildMemoInstruction(paymentMemoForIntent(intentId));
 }

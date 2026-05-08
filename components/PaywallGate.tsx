@@ -24,7 +24,7 @@ import {
   VELORAN_TREASURY,
 } from "@/lib/solana";
 import { buildPayForContentIx } from "@/lib/anchor-client";
-import { buildPaymentMemoIx } from "@/lib/payment-memo";
+import { buildMemoInstruction } from "@/lib/payment-memo";
 import { microUsdcToUsd } from "@/lib/slug";
 
 type Props = {
@@ -134,7 +134,7 @@ export function PaywallGate({
           VELORAN_TREASURY,
           USDC_MINT
         ),
-        buildPaymentMemoIx(intent.id),
+        buildMemoInstruction(intent.memo),
         buildPayForContentIx(
           {
             reader,
