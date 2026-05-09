@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { verifyPrivyToken } from "@/lib/privy-server";
 import { getServerConnection } from "@/lib/solana";
-import { verifyOnChainPayment } from "@/lib/x402";
+import {
+  createSubscriptionIntent,
+  getUsableSubscriptionIntent,
+} from "@/lib/payment-intents";
+import { verifyOnChainPayment, VELORAN_X402_NETWORK } from "@/lib/x402";
+import { event, sigPrefix6 } from "@/lib/log";
 import {
   signSubscriptionToken,
   subscriptionCookieName,
@@ -37,13 +43,10 @@ function isPlan(v: unknown): v is SubscriptionPlan {
 
 /**
  * POST /api/subscriptions/[creatorId]
- * Body: { txSignature: string, plan: "monthly" | "yearly" }
  *
- * Human path. Privy-authenticated. Verifies the on-chain payment to the
- * target creator, creates a Subscription row, and sets the HMAC cookie
- * so the reader's browser is gated-in for the plan duration.
- *
- * Idempotent on txSignature.
+ * Two-phase intent-bound flow:
+ *   Phase 1 (no txSignature): create SubscriptionPaymentIntent → 402
+ *   Phase 2 (intentId + txSignature): verify on-chain, consume intent, subscribe
  */
 export async function POST(req: NextRequest, { params }: Params) {
   const { creatorId } = await params;
@@ -56,34 +59,32 @@ export async function POST(req: NextRequest, { params }: Params) {
   const subscriber = await prisma.creator.findUnique({
     where: { privyUserId: claims.userId },
   });
-  if (!subscriber?.solanaAddress) {
+  if (!subscriber || !subscriber.solanaAddress) {
     return NextResponse.json(
       { error: "Subscriber has no wallet on record" },
       { status: 400 }
     );
   }
+  const subscriberAddress = subscriber.solanaAddress;
 
   // 2. Body
-  let body: { txSignature?: string; plan?: string };
+  let body: {
+    intentId?: string;
+    txSignature?: string;
+    plan?: string;
+  };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  const txSignature = body.txSignature?.trim();
-  if (!txSignature) {
-    return NextResponse.json(
-      { error: "Missing txSignature" },
-      { status: 400 }
-    );
-  }
-  if (!isPlan(body.plan)) {
+  const plan = body.plan;
+  if (!isPlan(plan)) {
     return NextResponse.json(
       { error: "plan must be 'monthly' or 'yearly'" },
       { status: 400 }
     );
   }
-  const plan: SubscriptionPlan = body.plan;
 
   // 3. Load creator + tier
   const creator = await prisma.creator.findUnique({
@@ -124,11 +125,71 @@ export async function POST(req: NextRequest, { params }: Params) {
     );
   }
 
-  // Idempotency: same tx signature already processed → return ok with cookie
+  // ── Phase 1: no txSignature → create intent, return 402 challenge ──
+  const txSignature = body.txSignature?.trim();
+  const intentId = body.intentId?.trim();
+  if (!txSignature) {
+    const intent = await createSubscriptionIntent({
+      creatorId: creator.id,
+      plan,
+      amountUsdc: expectedPrice,
+      subscriberAddress,
+      subscriberCreatorId: subscriber.id,
+    });
+    event("subscription_challenge_created", {
+      intentId: intent.id,
+      creatorId: creator.id,
+      network: VELORAN_X402_NETWORK,
+      expectedAmount: expectedPrice,
+      plan,
+    });
+    return NextResponse.json(
+      {
+        intentId: intent.id,
+        memo: intent.memo,
+        expiresAt: intent.expiresAt.toISOString(),
+      },
+      { status: 402 }
+    );
+  }
+
+  if (!intentId) {
+    return NextResponse.json(
+      { error: "Missing payment intent ID" },
+      { status: 400 }
+    );
+  }
+
+  // ── Phase 2: validate intent + verify on-chain + persist ──
+
+  const intent = await getUsableSubscriptionIntent({
+    intentId,
+    creatorId: creator.id,
+    subscriberAddress,
+  });
+  if ("error" in intent) {
+    if (intent.status === 409) {
+      event("subscription_replay_rejected", {
+        intentId,
+        signaturePrefix6: sigPrefix6(txSignature),
+        network: VELORAN_X402_NETWORK,
+        plan,
+      });
+    }
+    return NextResponse.json({ error: intent.error }, { status: intent.status });
+  }
+
+  // Idempotency at the signature level (second guard)
   const existing = await prisma.subscription.findUnique({
     where: { txSignature },
   });
   if (existing) {
+    event("subscription_replay_rejected", {
+      intentId,
+      signaturePrefix6: sigPrefix6(txSignature),
+      network: VELORAN_X402_NETWORK,
+      plan,
+    });
     return withSubscriptionCookie(
       NextResponse.json({
         ok: true,
@@ -141,13 +202,20 @@ export async function POST(req: NextRequest, { params }: Params) {
     );
   }
 
-  // 4. Fetch + verify the on-chain payment
+  // Fetch + verify the on-chain payment
   const connection = getServerConnection();
   const tx = await connection.getParsedTransaction(txSignature, {
     commitment: "confirmed",
     maxSupportedTransactionVersion: 0,
   });
   if (!tx) {
+    event("subscription_tx_lookup_failed", {
+      intentId,
+      signaturePrefix6: sigPrefix6(txSignature),
+      network: VELORAN_X402_NETWORK,
+      errorCode: "tx_not_found",
+      plan,
+    });
     return NextResponse.json(
       { error: "Transaction not found" },
       { status: 400 }
@@ -158,53 +226,91 @@ export async function POST(req: NextRequest, { params }: Params) {
     tx,
     recipientAddress: creator.solanaAddress,
     amountUsdc: expectedPrice,
-    expectedPayerAddress: subscriber.solanaAddress,
+    expectedPayerAddress: subscriberAddress,
+    expectedMemo: intent.memo,
   });
   if (!result.ok) {
+    event("subscription_verification_failed", {
+      intentId,
+      reason: result.error,
+      network: VELORAN_X402_NETWORK,
+      plan,
+    });
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
 
-  // 5. Persist subscription
+  // Persist subscription + consume intent
   const now = new Date();
   const expiresAt = new Date(
     now.getTime() + (plan === "yearly" ? 365 : 30) * MS_PER_DAY
   );
 
-  const sub = await prisma.subscription.create({
-    data: {
-      creatorId: creator.id,
-      subscriberCreatorId: subscriber.id,
-      subscriberAddress: subscriber.solanaAddress,
-      plan,
-      amountUsdc: expectedPrice,
-      startsAt: now,
-      expiresAt,
-      txSignature,
-    },
-    select: {
-      plan: true,
-      expiresAt: true,
-      txSignature: true,
-    },
-  });
+  try {
+    const sub = await prisma.$transaction(async (txPrisma) => {
+      const subRow = await txPrisma.subscription.create({
+        data: {
+          creatorId: creator.id,
+          subscriberCreatorId: subscriber.id,
+          subscriberAddress,
+          plan,
+          amountUsdc: expectedPrice,
+          startsAt: now,
+          expiresAt,
+          txSignature,
+        },
+        select: {
+          plan: true,
+          expiresAt: true,
+          txSignature: true,
+        },
+      });
+      await txPrisma.subscriptionPaymentIntent.update({
+        where: { id: intent.id },
+        data: { consumedAt: new Date() },
+      });
+      return subRow;
+    });
 
-  return withSubscriptionCookie(
-    NextResponse.json({
-      ok: true,
-      plan: sub.plan,
-      expiresAt: sub.expiresAt.toISOString(),
-      txSignature: sub.txSignature,
-    }),
-    creator.id,
-    plan
-  );
+    event("subscription_accepted", {
+      intentId: intent.id,
+      signaturePrefix6: sigPrefix6(txSignature),
+      network: VELORAN_X402_NETWORK,
+      creatorDeltaMicro: Number(result.creatorDelta),
+      platformDeltaMicro: Number(result.platformDelta),
+      plan,
+    });
+
+    return withSubscriptionCookie(
+      NextResponse.json({
+        ok: true,
+        plan: sub.plan,
+        expiresAt: sub.expiresAt.toISOString(),
+        txSignature: sub.txSignature,
+      }),
+      creator.id,
+      plan
+    );
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      event("subscription_replay_rejected", {
+        intentId,
+        signaturePrefix6: sigPrefix6(txSignature),
+        network: VELORAN_X402_NETWORK,
+        plan,
+      });
+      return NextResponse.json(
+        { error: "Subscription signature already consumed" },
+        { status: 409 }
+      );
+    }
+    throw e;
+  }
 }
 
 /**
  * GET /api/subscriptions/[creatorId]   (Privy authed)
  *
  * Returns the caller's active subscription to this creator, if any.
- * Used by /c/[address] to show "Subscribed until ..." state.
  */
 export async function GET(req: NextRequest, { params }: Params) {
   const { creatorId } = await params;

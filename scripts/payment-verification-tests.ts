@@ -43,6 +43,26 @@ let validatePaymentIntentRecord: (
   intent: PaymentIntentContext,
   args: { postId: string; payerAddress: string }
 ) => PaymentIntentContext | { error: string; status: number };
+let validateSubscriptionIntentRecord: (
+  intent: {
+    id: string;
+    creatorId: string;
+    subscriberAddress: string | null;
+    memo: string;
+    expiresAt: Date;
+    consumedAt: Date | null;
+  },
+  args: { creatorId: string; subscriberAddress: string }
+) =>
+  | {
+      id: string;
+      creatorId: string;
+      subscriberAddress: string | null;
+      memo: string;
+      expiresAt: Date;
+      consumedAt: Date | null;
+    }
+  | { error: string; status: number };
 
 const HAPPY_RECIPIENT = "BKnuQ2psJ3rSwVhTJms2DAG7zqQ7kuFuLoQTFqYnTU8W";
 const HAPPY_PAYER = "oBSzTgxxpJ8WGcGxwHweDchFAofMfykBJbQpWE9esRo";
@@ -271,12 +291,100 @@ function assertIntentCases(): number {
   return 6;
 }
 
+// ---------------------------------------------------------------------------
+// Subscription intent invariants (no DB — pure validation logic)
+// ---------------------------------------------------------------------------
+
+function subIntent(overrides: Partial<{
+  creatorId: string;
+  subscriberAddress: string | null;
+  consumedAt: Date | null;
+  expiresAt: Date;
+}> = {}) {
+  return {
+    id: "sub_intent_test",
+    creatorId: "creator_test",
+    subscriberCreatorId: null,
+    subscriberAddress: null as string | null,
+    plan: "monthly",
+    amountUsdc: HAPPY_AMOUNT,
+    nonce: "subnonce000000000000000000000000",
+    memo: HAPPY_MEMO,
+    expiresAt: new Date(Date.now() + 60_000),
+    consumedAt: null as Date | null,
+    ...overrides,
+  };
+}
+
+function assertSubscriptionIntentCases(): number {
+  const valid = subIntent({ subscriberAddress: HAPPY_PAYER });
+  const r1 = validateSubscriptionIntentRecord(valid, {
+    creatorId: valid.creatorId,
+    subscriberAddress: HAPPY_PAYER,
+  });
+  assert.ok(!("error" in r1), `valid subscription intent accepted — got ${formatResult(r1)}`);
+  console.log("✅ valid subscription intent accepted");
+
+  const r2 = validateSubscriptionIntentRecord(valid, {
+    creatorId: "wrong_creator",
+    subscriberAddress: HAPPY_PAYER,
+  });
+  assert.deepEqual(r2, {
+    error: "Subscription intent is for a different creator",
+    status: 400,
+  });
+  console.log("✅ wrong-creator subscription intent rejected");
+
+  const bound = subIntent({ subscriberAddress: HAPPY_PAYER });
+  const r3 = validateSubscriptionIntentRecord(bound, {
+    creatorId: bound.creatorId,
+    subscriberAddress: HAPPY_PAYER,
+  });
+  assert.ok(!("error" in r3));
+  console.log("✅ bound subscriber accepted");
+
+  const r4 = validateSubscriptionIntentRecord(bound, {
+    creatorId: bound.creatorId,
+    subscriberAddress: OTHER_PAYER,
+  });
+  assert.deepEqual(r4, {
+    error: "Subscription intent is bound to a different payer",
+    status: 400,
+  });
+  console.log("✅ bound subscriber mismatch rejected");
+
+  const consumed = subIntent({ consumedAt: new Date() });
+  const r5 = validateSubscriptionIntentRecord(consumed, {
+    creatorId: consumed.creatorId,
+    subscriberAddress: HAPPY_PAYER,
+  });
+  assert.deepEqual(r5, {
+    error: "Subscription intent already consumed",
+    status: 409,
+  });
+  console.log("✅ consumed subscription intent rejected");
+
+  const expired = subIntent({ expiresAt: new Date(Date.now() - 60_000) });
+  const r6 = validateSubscriptionIntentRecord(expired, {
+    creatorId: expired.creatorId,
+    subscriberAddress: HAPPY_PAYER,
+  });
+  assert.deepEqual(r6, {
+    error: "Subscription intent expired",
+    status: 400,
+  });
+  console.log("✅ expired subscription intent rejected");
+
+  return 6;
+}
+
 async function main(): Promise<void> {
   ({ verifyOnChainPayment } = await import("../lib/x402"));
   ({ validatePaymentIntentRecord } = await import("../lib/payment-intent-validation"));
+  ({ validateSubscriptionIntentRecord } = await import("../lib/payment-intents"));
 
-  const total = assertVerificationCases() + assertIntentCases();
-  console.log(`\npayment verification tests: ${total}/${verificationCases.length + 6} passed`);
+  const total = assertVerificationCases() + assertIntentCases() + assertSubscriptionIntentCases();
+  console.log(`\npayment verification tests: ${total}/${verificationCases.length + 12} passed`);
 }
 
 main().catch((err) => {

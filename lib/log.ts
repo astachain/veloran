@@ -10,6 +10,8 @@ const ALLOWED_KEYS = new Set([
   "creatorDeltaMicro",
   "platformDeltaMicro",
   "ts",
+  "plan",
+  "creatorId",
 ]);
 
 export function event(name: string, payload: Record<string, unknown>): void {

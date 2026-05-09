@@ -52,6 +52,20 @@ const networkHelper = readFileSync("lib/network.ts", "utf8");
 assert.match(networkHelper, /solscanTxUrl/);
 assert.match(networkHelper, /solscanAccountUrl/);
 
+const paymentIntents = readFileSync("lib/payment-intents.ts", "utf8");
+assert.match(paymentIntents, /createSubscriptionIntent/);
+assert.match(paymentIntents, /getUsableSubscriptionIntent/);
+
+const subscribeBtn = readFileSync("components/SubscribeButton.tsx", "utf8");
+assert.match(subscribeBtn, /buildMemoInstruction\(memo\)/);
+
+const subRoute = readFileSync("app/api/subscriptions/\[creatorId\]/route.ts", "utf8");
+assert.match(subRoute, /expectedMemo: intent\.memo/);
+assert.match(subRoute, /subscriptionPaymentIntent\.update/);
+assert.match(subRoute, /consumedAt: new Date\(\)/);
+
+assert.match(schema, /model SubscriptionPaymentIntent/);
+
 if (process.env.NEXT_PUBLIC_SOLANA_NETWORK === "mainnet-beta") {
   assert.notEqual(
     process.env.NEXT_PUBLIC_USDC_MINT,

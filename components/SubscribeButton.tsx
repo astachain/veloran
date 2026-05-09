@@ -24,6 +24,7 @@ import {
   VELORAN_TREASURY,
 } from "@/lib/solana";
 import { buildPayForContentIx } from "@/lib/anchor-client";
+import { buildMemoInstruction } from "@/lib/payment-memo";
 import { microUsdcToUsd } from "@/lib/slug";
 import { solscanTxUrl } from "@/lib/network";
 
@@ -38,7 +39,13 @@ type Props = {
   initialExpiresAt?: string | null;
 };
 
-type Status = "idle" | "paying" | "verifying" | "subscribed" | "error";
+type Status =
+  | "idle"
+  | "creating_intent"
+  | "paying"
+  | "verifying"
+  | "subscribed"
+  | "error";
 
 // Small base58 encoder (matches PaywallGate to avoid pulling in another dep)
 const ALPHA = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -102,6 +109,29 @@ export function SubscribeButton({
     }
 
     try {
+      // ── Phase 1: create intent ──
+      setStatus("creating_intent");
+      const token = await getAccessToken();
+      const intentRes = await fetch(`/api/subscriptions/${creatorId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ plan }),
+      });
+      if (intentRes.status !== 402) {
+        const errBody = await intentRes.json().catch(() => ({}));
+        throw new Error(
+          errBody.error ?? `Intent creation failed (${intentRes.status})`
+        );
+      }
+      const { intentId, memo } = (await intentRes.json()) as {
+        intentId: string;
+        memo: string;
+      };
+
+      // ── Phase 2: build + sign tx with memo ──
       setStatus("paying");
 
       const subscriber = new PublicKey(wallet.address);
@@ -110,17 +140,12 @@ export function SubscribeButton({
         USDC_MINT,
         subscriber
       );
-      const creatorAta = getAssociatedTokenAddressSync(
-        USDC_MINT,
-        creator
-      );
+      const creatorAta = getAssociatedTokenAddressSync(USDC_MINT, creator);
       const platformAta = getAssociatedTokenAddressSync(
         USDC_MINT,
         VELORAN_TREASURY
       );
 
-      // Same flow as PaywallGate: safe ATA creation, then the generic
-      // pay_for_content with the tier price.
       const ixs = [
         createAssociatedTokenAccountIdempotentInstruction(
           subscriber,
@@ -134,6 +159,7 @@ export function SubscribeButton({
           VELORAN_TREASURY,
           USDC_MINT
         ),
+        buildMemoInstruction(memo),
         buildPayForContentIx(
           {
             reader: subscriber,
@@ -175,27 +201,22 @@ export function SubscribeButton({
         "confirmed"
       );
 
-      const token = await getAccessToken();
-      const res = await fetch(`/api/subscriptions/${creatorId}`, {
+      // ── Phase 3: settle with server ──
+      const settleRes = await fetch(`/api/subscriptions/${creatorId}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ txSignature: sigB58, plan }),
+        body: JSON.stringify({ intentId, txSignature: sigB58, plan }),
       });
-      const body = await res.json();
-      if (!res.ok) {
-        throw new Error(body.error ?? `Subscribe failed (${res.status})`);
+      const body = await settleRes.json();
+      if (!settleRes.ok) {
+        throw new Error(body.error ?? `Subscribe failed (${settleRes.status})`);
       }
 
       setExpiresAt(body.expiresAt);
       setStatus("subscribed");
-      // Re-render the parent server component so siblings (e.g. the
-      // *other* plan's button on /c/[address]) become the unified
-      // "Subscribed" card instead of staying clickable. Without this,
-      // a user who just paid for yearly could still hit the monthly
-      // button and double-pay until manual refresh.
       router.refresh();
     } catch (e) {
       console.error(e);
@@ -236,19 +257,25 @@ export function SubscribeButton({
   }
 
   const label =
-    status === "paying"
-      ? "Sending payment…"
-      : status === "verifying"
-        ? "Verifying on-chain…"
-        : !authenticated
-          ? `Sign in to subscribe`
-          : `Subscribe · $${priceUsd}/${planLabel}`;
+    status === "creating_intent"
+      ? "Preparing payment…"
+      : status === "paying"
+        ? "Sending payment…"
+        : status === "verifying"
+          ? "Verifying on-chain…"
+          : !authenticated
+            ? `Sign in to subscribe`
+            : `Subscribe · $${priceUsd}/${planLabel}`;
 
   return (
     <div className="flex flex-col gap-2">
       <button
         onClick={handleSubscribe}
-        disabled={status === "paying" || status === "verifying"}
+        disabled={
+          status === "creating_intent" ||
+          status === "paying" ||
+          status === "verifying"
+        }
         className="px-5 py-3 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-60 disabled:cursor-wait text-white font-medium transition shadow-lg shadow-violet-600/20"
       >
         {label}

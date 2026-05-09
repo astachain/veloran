@@ -72,6 +72,22 @@ model PaymentIntent {
   @@index([postId, expiresAt])
 }
 
+model SubscriptionPaymentIntent {
+  id                  String   @id @default(cuid())
+  creatorId           String
+  subscriberCreatorId String?
+  subscriberAddress   String?
+  plan                String
+  amountUsdc          Int
+  nonce               String   @unique
+  memo                String
+  expiresAt           DateTime
+  consumedAt          DateTime?
+  createdAt           DateTime @default(now())
+
+  @@index([creatorId, expiresAt])
+}
+
 // One row per consumed Solana tx signature. This is the production replay lock.
 model PaymentReceipt {
   id             String   @id @default(cuid())
