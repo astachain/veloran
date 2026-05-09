@@ -1,5 +1,12 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import {
+  CURRENT_NETWORK,
+  PUBLIC_RPC_URL,
+  USDC_MINT,
+  VELORAN_PROGRAM_ID,
+  VELORAN_TREASURY,
+} from "@/lib/solana";
 
 export const metadata: Metadata = {
   title: "For agents · Veloran",
@@ -93,19 +100,19 @@ export default function ForAgentsPage() {
   "accepts": [
     {
       "scheme": "exact-veloran",
-      "network": "solana-devnet",
-      "asset": "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+      "network": "solana-${CURRENT_NETWORK}",
+      "asset": "${USDC_MINT.toBase58()}",
       "maxAmountRequired": "500000",
       "resource": "/api/x402/<slug>",
       "description": "Unlock <preview> — pays creator (95%) + Veloran (5%)",
       "payTo": {
         "creator": "<seller pubkey>",
         "creatorAta": "<seller USDC ATA>",
-        "platform": "DgGYE7boZTEwrotFsYS9bFYsrgpz8TC76cXCZ8GcFKnP",
+        "platform": "${VELORAN_TREASURY.toBase58()}",
         "platformAta": "<platform USDC ATA>"
       },
       "extra": {
-        "programId": "2CtnLfdePpjitQQLtHrQAsa74RXLiubKfSdJmjy2pGcS",
+        "programId": "${VELORAN_PROGRAM_ID.toBase58()}",
         "splitBps": { "creator": 9500, "platform": 500 }
       }
     }
@@ -114,7 +121,7 @@ export default function ForAgentsPage() {
         />
         <p className="mt-3 text-sm text-neutral-500">
           <strong>Notes:</strong> <code>asset</code> is the USDC mint on
-          devnet. <code>maxAmountRequired</code> is in micro-USDC (6 decimals
+          {CURRENT_NETWORK}. <code>maxAmountRequired</code> is in micro-USDC (6 decimals
           — so <code>500000</code> = $0.50). The <code>extra.programId</code>{" "}
           is the deployed Anchor program; agents call its{" "}
           <code>pay_for_content</code> instruction to settle.
@@ -139,7 +146,7 @@ const ix = buildPayForContentIx(
   BigInt(challenge.maxAmountRequired)
 );
 
-const conn = new Connection("https://api.devnet.solana.com", "confirmed");
+const conn = new Connection("${PUBLIC_RPC_URL}", "confirmed");
 const { blockhash } = await conn.getLatestBlockhash("confirmed");
 const tx = new VersionedTransaction(
   new TransactionMessage({
@@ -165,7 +172,7 @@ await conn.confirmTransaction(sig, "confirmed");`}
           code={`// Decoded payload of the X-PAYMENT header:
 {
   "scheme": "exact-veloran",
-  "network": "solana-devnet",
+  "network": "solana-${CURRENT_NETWORK}",
   "txSignature": "<base58 signature>",
   "payerAddress": "<agent pubkey>"
 }`}

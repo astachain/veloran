@@ -43,4 +43,36 @@ assert.match(aiReader, /buildMemoInstruction\(reqs\.extra\.memo\)/);
 const paywallGate = readFileSync("components/PaywallGate.tsx", "utf8");
 assert.match(paywallGate, /buildMemoInstruction\(intent\.memo\)/);
 
+const solanaConfig = readFileSync("lib/solana.ts", "utf8");
+assert.match(solanaConfig, /Refusing to boot: NEXT_PUBLIC_SOLANA_NETWORK=mainnet-beta/);
+assert.match(solanaConfig, /DEVNET_USDC_MINT/);
+assert.match(solanaConfig, /SERVER_SOLANA_RPC_URL/);
+
+const networkHelper = readFileSync("lib/network.ts", "utf8");
+assert.match(networkHelper, /solscanTxUrl/);
+assert.match(networkHelper, /solscanAccountUrl/);
+
+if (process.env.NEXT_PUBLIC_SOLANA_NETWORK === "mainnet-beta") {
+  assert.notEqual(
+    process.env.NEXT_PUBLIC_USDC_MINT,
+    "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+    "config: mainnet env must not use devnet USDC mint"
+  );
+  assert.notEqual(
+    process.env.NEXT_PUBLIC_VELORAN_PROGRAM_ID,
+    "2CtnLfdePpjitQQLtHrQAsa74RXLiubKfSdJmjy2pGcS",
+    "config: mainnet env must not use devnet Veloran program"
+  );
+  assert.notEqual(
+    process.env.NEXT_PUBLIC_VELORAN_TREASURY,
+    "DgGYE7boZTEwrotFsYS9bFYsrgpz8TC76cXCZ8GcFKnP",
+    "config: mainnet env must not use devnet treasury"
+  );
+  assert.ok(
+    process.env.SERVER_SOLANA_RPC_URL &&
+      !process.env.SERVER_SOLANA_RPC_URL.toLowerCase().includes("devnet"),
+    "config: mainnet env requires non-devnet SERVER_SOLANA_RPC_URL"
+  );
+}
+
 console.log("payment safety smoke: ok");

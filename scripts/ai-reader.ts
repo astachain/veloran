@@ -35,7 +35,9 @@ import { buildMemoInstruction } from "../lib/payment-memo";
 import {
   PUBLIC_RPC_URL,
   USDC_MINT,
+  CURRENT_NETWORK,
 } from "../lib/solana";
+import { solscanTxUrl } from "../lib/network";
 import {
   base64urlEncode,
   PaymentRequirements,
@@ -208,7 +210,7 @@ async function main() {
   tx.sign([agent]);
 
   // 3. Submit + confirm
-  logStep("🚀", "Submitting to Solana devnet…");
+  logStep("🚀", `Submitting to Solana ${CURRENT_NETWORK}…`);
   const signature = await connection.sendTransaction(tx, {
     skipPreflight: false,
     maxRetries: 3,
@@ -224,7 +226,7 @@ async function main() {
   logStep(
     "🔍",
     c.dim(
-      `Solscan:         https://solscan.io/tx/${signature}?cluster=devnet`
+      `Solscan:         ${solscanTxUrl(signature)}`
     )
   );
   console.log();

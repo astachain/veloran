@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { microUsdcToUsd } from "@/lib/slug";
+import { solscanTxUrl } from "@/lib/network";
+import { CURRENT_NETWORK } from "@/lib/solana";
 import { CreatorTierEditor } from "@/components/CreatorTierEditor";
 
 type Me = {
@@ -185,7 +187,7 @@ export function DashboardClient() {
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
         <Card label="Signed in as" value={user?.email?.address ?? "—"} />
         <Card
-          label="Solana address (devnet)"
+          label={`Solana address (${CURRENT_NETWORK})`}
           value={me?.solanaAddress ? truncate(me.solanaAddress) : "creating…"}
           mono
         />
@@ -487,7 +489,7 @@ function EarningsPanel({ earnings }: { earnings: Earnings }) {
                   +${microUsdcToUsd(u.amountUsdc)}
                 </p>
                 <a
-                  href={`https://solscan.io/tx/${u.txSignature}?cluster=devnet`}
+                  href={solscanTxUrl(u.txSignature)}
                   target="_blank"
                   rel="noreferrer"
                   className="text-xs text-violet-400 hover:text-violet-300 font-mono"
@@ -544,7 +546,7 @@ function EarningsPanel({ earnings }: { earnings: Earnings }) {
                       +${microUsdcToUsd(s.amountUsdc)}
                     </p>
                     <a
-                      href={`https://solscan.io/tx/${s.txSignature}?cluster=devnet`}
+                      href={solscanTxUrl(s.txSignature)}
                       target="_blank"
                       rel="noreferrer"
                       className="text-xs text-violet-400 hover:text-violet-300 font-mono"

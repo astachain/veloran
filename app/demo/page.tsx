@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { solscanAccountUrl } from "@/lib/network";
+import { CURRENT_NETWORK, VELORAN_PROGRAM_ID } from "@/lib/solana";
 
 export const metadata: Metadata = {
   title: "Demo · Veloran",
@@ -58,7 +60,7 @@ export default function DemoPage() {
           </Bullet>
           <Bullet>
             <strong>On-chain settlement.</strong> A custom Anchor program
-            (<code className="text-xs">2CtnLfde…2pGcS</code>) splits 95/5 in
+            (<code className="text-xs">{VELORAN_PROGRAM_ID.toBase58().slice(0,4)}…{VELORAN_PROGRAM_ID.toBase58().slice(-4)}</code>) splits 95/5 in
             one atomic transaction. Veloran never custodies funds.
           </Bullet>
           <Bullet>
@@ -232,14 +234,14 @@ export default function DemoPage() {
           <li className="flex gap-3">
             <span className="mt-2 shrink-0 h-1.5 w-1.5 rounded-full bg-violet-400" />
             <span>
-              Anchor program (devnet):{" "}
+              Anchor program ({CURRENT_NETWORK}):{" "}
               <a
-                href="https://solscan.io/account/2CtnLfdePpjitQQLtHrQAsa74RXLiubKfSdJmjy2pGcS?cluster=devnet"
+                href={solscanAccountUrl(VELORAN_PROGRAM_ID.toBase58())}
                 target="_blank"
                 rel="noreferrer"
                 className="text-violet-300 hover:text-violet-200 underline underline-offset-2"
               >
-                2CtnLfde…2pGcS on Solscan
+                {VELORAN_PROGRAM_ID.toBase58().slice(0,4)}…{VELORAN_PROGRAM_ID.toBase58().slice(-4)} on Solscan
               </a>
             </span>
           </li>

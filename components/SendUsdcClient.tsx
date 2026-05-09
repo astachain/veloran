@@ -18,7 +18,8 @@ import {
   getAssociatedTokenAddressSync,
 } from "@solana/spl-token";
 import Link from "next/link";
-import { PRIVY_SOLANA_CHAIN, PUBLIC_RPC_URL, USDC_MINT } from "@/lib/solana";
+import { PRIVY_SOLANA_CHAIN, PUBLIC_RPC_URL, USDC_MINT, CURRENT_NETWORK } from "@/lib/solana";
+import { solscanTxUrl } from "@/lib/network";
 
 const USDC_DECIMALS = 6;
 
@@ -130,7 +131,7 @@ export function SendUsdcClient() {
       >
         ← Dashboard
       </Link>
-      <h1 className="mt-4 text-2xl font-semibold">Send USDC (devnet)</h1>
+      <h1 className="mt-4 text-2xl font-semibold">Send USDC ({CURRENT_NETWORK})</h1>
       <p className="mt-2 text-sm text-neutral-500">
         Tooling page. Sends USDC from your logged-in wallet to any address —
         useful for funding test agents.
@@ -187,7 +188,7 @@ export function SendUsdcClient() {
             Sent
           </p>
           <a
-            href={`https://solscan.io/tx/${signature}?cluster=devnet`}
+            href={solscanTxUrl(signature)}
             target="_blank"
             rel="noreferrer"
             className="mt-2 block text-sm text-violet-300 hover:text-violet-200 font-mono break-all"

@@ -3,6 +3,8 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { microUsdcToUsd } from "@/lib/slug";
+import { solscanTxUrl } from "@/lib/network";
+import { CURRENT_NETWORK } from "@/lib/solana";
 import { SubscribeButton } from "@/components/SubscribeButton";
 import { SubscribeOptions } from "@/components/SubscribeOptions";
 import { AuthRefresh } from "@/components/AuthRefresh";
@@ -211,7 +213,7 @@ export default async function CreatorProfilePage({ params }: Props) {
             </span>
           </p>
           <a
-            href={`https://solscan.io/tx/${activeSub.txSignature}?cluster=devnet`}
+            href={solscanTxUrl(activeSub.txSignature)}
             target="_blank"
             rel="noreferrer"
             className="mt-3 inline-block text-xs font-mono text-violet-400 hover:text-violet-300"
@@ -320,7 +322,7 @@ export default async function CreatorProfilePage({ params }: Props) {
       </div>
 
       <p className="mt-8 text-center text-xs text-neutral-600">
-        Payments settle on Solana devnet · 95% to creator, 5% to Veloran ·
+        Payments settle on Solana {CURRENT_NETWORK} · 95% to creator, 5% to Veloran ·
         on-chain
       </p>
     </main>

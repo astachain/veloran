@@ -26,6 +26,7 @@ import {
 import { buildPayForContentIx } from "@/lib/anchor-client";
 import { buildMemoInstruction } from "@/lib/payment-memo";
 import { microUsdcToUsd } from "@/lib/slug";
+import { solscanTxUrl } from "@/lib/network";
 
 type Props = {
   slug: string;
@@ -209,7 +210,7 @@ export function PaywallGate({
           {txSig && (
             <p className="mt-1 text-xs text-neutral-500 font-mono break-all">
               <a
-                href={`https://solscan.io/tx/${txSig}?cluster=devnet`}
+                href={solscanTxUrl(txSig)}
                 target="_blank"
                 rel="noreferrer"
                 className="hover:text-violet-300"

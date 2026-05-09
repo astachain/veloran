@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { microUsdcToUsd } from "@/lib/slug";
+import { CURRENT_NETWORK } from "@/lib/solana";
 import { PaywallGate } from "@/components/PaywallGate";
 import { AuthRefresh } from "@/components/AuthRefresh";
 import {
@@ -210,7 +211,7 @@ export default async function PaywallPage({ params }: Props) {
       )}
 
       <p className="mt-8 text-center text-xs text-neutral-600">
-        Payments settle on Solana devnet · 95% to creator, 5% to Veloran ·
+        Payments settle on Solana {CURRENT_NETWORK} · 95% to creator, 5% to Veloran ·
         on-chain
       </p>
     </main>

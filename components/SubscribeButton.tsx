@@ -25,6 +25,7 @@ import {
 } from "@/lib/solana";
 import { buildPayForContentIx } from "@/lib/anchor-client";
 import { microUsdcToUsd } from "@/lib/slug";
+import { solscanTxUrl } from "@/lib/network";
 
 type Plan = "monthly" | "yearly";
 
@@ -222,7 +223,7 @@ export function SubscribeButton({
         </p>
         {txSig && (
           <a
-            href={`https://solscan.io/tx/${txSig}?cluster=devnet`}
+            href={solscanTxUrl(txSig)}
             target="_blank"
             rel="noreferrer"
             className="mt-2 block text-xs font-mono text-violet-400 hover:text-violet-300"
