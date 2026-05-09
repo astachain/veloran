@@ -89,6 +89,52 @@ Eight beats, two stories (human + AI), one closer. Full script in the plan file'
 
 ---
 
+## Session resume notes (last updated 2026-05-09 afternoon — mainnet program deployed + custom domain live)
+
+**Where we are:** Hackathon submission day. Two big milestones shipped today (May 9):
+
+1. **Veloran program is live on Solana mainnet.**
+   - Mainnet program ID: `89ZFuq1beQHRHRHWY6yezePsdWvTxtMGrLVDXu8DLa1j`
+   - Mainnet treasury / upgrade authority: `8urcsZvfMnj8Rq3qo5Xk7PEDUQ7kS54cFTbPE6DxZsAD` (private keypair held by Asta with paper-mnemonic backup; old `41iGsC…` deployer was quarantined to `~/.config/solana/quarantine-2026-05-09/` and replaced with mnemonic-backed regeneration)
+   - Mainnet USDC mint: `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`
+   - Deploy tx: `3Kz1aXf24Uvm5bPZUoCqhGakkeLwZtamAHFYJAMaeHiDD9q4aQ6DDtTr8Pw8ramMhkV6kvHMM5yF9TosVWWJnGeH`
+   - Smoke test (real `pay_for_content`, 0.05 USDC self-loop): `2J5G1ttrLH8EVGSfAwPCfR6QhbZV2kgcwBVYaV7uQ9apR5iKrDnzmkmWwHB3Y5RHA1sEwWCpUEZaH5w1uapr81nM`
+   - Built via `anchor build -- --features mainnet`. Cargo feature gates the program ID + USDC + treasury constants in `anchor/programs/veloran-paywall/src/lib.rs`. Default build (no flag) still produces the devnet binary at `2CtnLfde…`.
+   - Source committed in `15c9354 feat: deploy Veloran program to Solana mainnet`.
+
+2. **Custom domain `https://veloran.app` is live on Vercel.**
+   - Cloudflare Registrar + Cloudflare DNS, manual setup, gray-cloud (DNS only, NOT proxied)
+   - Apex CNAME → `dd0217c7572bc076.vercel-dns-017.com.`
+   - `www.veloran.app` 307-redirects to apex
+   - HSTS active, SSL via Vercel/Let's Encrypt
+   - Privy Allowed Origins updated to include both `https://veloran.app` and `https://www.veloran.app`
+   - Sign-in flow verified working on the new domain
+
+**The live app is still on devnet.** Vercel env vars unchanged; `lib/solana.ts` still reads devnet constants. The mainnet program is independent, on-chain, audit-ready, but NOT yet wired to the frontend. That's intentional per the May 9 sprint plan (`docs/plans/2026-05-09-mainnet-and-hackathon-sprint.md`) — flipping the app to mainnet without Phase 4 hardening would create real-money risk for zero pitch benefit.
+
+**Where Asta is right now:** on a break. Returning to record the demo video.
+
+**Active handoff to Hermes:** `docs/handoffs/2026-05-09-hermes-deck-script-domain-mainnet-update.md` (commit `5479d8b`). Hermes will update `docs/demo-script.md` + `docs/pitch-deck.md` + `docs/pitch-deck.html` + `README.md` + `docs/submission-description.md` to reflect the new domain + mainnet program ID. Code/env unchanged.
+
+**When Asta returns:**
+1. `git pull` to fetch Hermes's doc updates
+2. Read the updated demo script aloud — tweak any awkward phrasing
+3. Re-export the pitch deck as PDF (or build visual deck from updated `docs/pitch-deck.md`)
+4. Record 2:30 demo video on Loom using the updated script and `https://veloran.app`
+5. Submit to Solana Frontier portal: live URL + GitHub + video URL + deck PDF + description
+
+**Submission package fields ready when video is done:**
+- Live URL: `https://veloran.app`
+- GitHub: `https://github.com/astachain/veloran`
+- Devnet program: `2CtnLfdePpjitQQLtHrQAsa74RXLiubKfSdJmjy2pGcS` (live demo hero)
+- Mainnet program: `89ZFuq1beQHRHRHWY6yezePsdWvTxtMGrLVDXu8DLa1j` (production-ready)
+- Submitter: Asta Chain / `dr.adityasaputra@gmail.com`
+
+**Locked closing line (verbatim everywhere):**
+> *Publish once. Humans pay with checkout. Agents pay with HTTP 402. Sellers get paid directly on-chain.*
+
+---
+
 ## Session resume notes (last updated 2026-04-29 evening, mainnet keypairs generated — awaiting funding)
 
 **Where we are:** All build work complete. Positioning v2 shipped (payment + access layer for the agent economy). Two new pages live (`/for-agents`, `/demo`). Pitch deck rewritten to prompt's 10-slide structure. **Mainnet hybrid plan approved + keypairs generated.** Next gate: user funds the mainnet deployer with ~1.05 SOL.
