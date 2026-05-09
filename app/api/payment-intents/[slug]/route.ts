@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { verifyPrivyToken } from "@/lib/privy-server";
 import { createPaymentIntent } from "@/lib/payment-intents";
+import { event } from "@/lib/log";
+import { VELORAN_X402_NETWORK } from "@/lib/x402";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +50,12 @@ export async function POST(req: NextRequest, { params }: Params) {
     amountUsdc: post.priceUsdc,
     creatorAddress: post.creator.solanaAddress,
     payerAddress: reader.solanaAddress,
+  });
+  event("payment_challenge_created", {
+    intentId: intent.id,
+    slug: post.slug,
+    network: VELORAN_X402_NETWORK,
+    expectedAmount: post.priceUsdc,
   });
 
   return NextResponse.json({

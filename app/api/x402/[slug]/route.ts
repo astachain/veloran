@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getServerConnection } from "@/lib/solana";
+import { event, sigPrefix6 } from "@/lib/log";
 import { createPaymentIntent, getUsablePaymentIntent } from "@/lib/payment-intents";
 import {
   buildPaymentRequirements,
@@ -47,6 +48,12 @@ export async function GET(req: NextRequest, { params }: Params) {
       slug: post.slug,
       amountUsdc: post.priceUsdc,
       creatorAddress: post.creator.solanaAddress,
+    });
+    event("payment_challenge_created", {
+      intentId: intent.id,
+      slug: post.slug,
+      network: VELORAN_X402_NETWORK,
+      expectedAmount: post.priceUsdc,
     });
     const requirements = buildPaymentRequirements(
       {
@@ -95,6 +102,13 @@ export async function GET(req: NextRequest, { params }: Params) {
     payerAddress: parsed.payerAddress,
   });
   if ("error" in intent) {
+    if (intent.status === 409) {
+      event("payment_replay_rejected", {
+        intentId: parsed.intentId,
+        signaturePrefix6: sigPrefix6(parsed.txSignature),
+        network: VELORAN_X402_NETWORK,
+      });
+    }
     return NextResponse.json({ error: intent.error }, { status: intent.status });
   }
 
@@ -102,6 +116,11 @@ export async function GET(req: NextRequest, { params }: Params) {
     where: { txSignature: parsed.txSignature },
   });
   if (existingReceipt) {
+    event("payment_replay_rejected", {
+      intentId: parsed.intentId,
+      signaturePrefix6: sigPrefix6(parsed.txSignature),
+      network: VELORAN_X402_NETWORK,
+    });
     return NextResponse.json(
       { error: "Payment signature already consumed" },
       { status: 409 }
@@ -114,6 +133,12 @@ export async function GET(req: NextRequest, { params }: Params) {
     maxSupportedTransactionVersion: 0,
   });
   if (!tx) {
+    event("payment_tx_lookup_failed", {
+      intentId: parsed.intentId,
+      signaturePrefix6: sigPrefix6(parsed.txSignature),
+      network: VELORAN_X402_NETWORK,
+      errorCode: "tx_not_found",
+    });
     return NextResponse.json(
       { error: "Transaction not found" },
       { status: 400 }
@@ -128,6 +153,11 @@ export async function GET(req: NextRequest, { params }: Params) {
     expectedMemo: intent.memo,
   });
   if (!result.ok) {
+    event("payment_verification_failed", {
+      intentId: parsed.intentId,
+      reason: result.error,
+      network: VELORAN_X402_NETWORK,
+    });
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
 
@@ -157,8 +187,20 @@ export async function GET(req: NextRequest, { params }: Params) {
         data: { consumedAt: new Date() },
       }),
     ]);
+    event("payment_accepted", {
+      intentId: intent.id,
+      signaturePrefix6: sigPrefix6(parsed.txSignature),
+      network: VELORAN_X402_NETWORK,
+      creatorDeltaMicro: Number(result.creatorDelta),
+      platformDeltaMicro: Number(result.platformDelta),
+    });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      event("payment_replay_rejected", {
+        intentId: parsed.intentId,
+        signaturePrefix6: sigPrefix6(parsed.txSignature),
+        network: VELORAN_X402_NETWORK,
+      });
       return NextResponse.json(
         { error: "Payment signature or intent already consumed" },
         { status: 409 }
