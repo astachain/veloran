@@ -4,20 +4,16 @@
 
 ## How to view
 
-Open `index.html` in a Chromium-based browser (Chrome, Brave, Edge, Arc) at full screen on a ≥1920×1080 display:
+Serve the directory locally, then open `index.html` in a Chromium-based browser (Chrome, Brave, Edge, Arc) at full screen on a ≥1920×1080 display:
 
 ```bash
-# macOS
-open docs/deck/index.html
-
-# Linux (WSL or native)
-xdg-open docs/deck/index.html
-
-# Windows (from WSL)
-wslview docs/deck/index.html
-
-# Or from any OS, just drag-drop the file into a browser tab.
+cd docs/deck
+python3 -m http.server 8123
+# then open:
+# http://127.0.0.1:8123/index.html
 ```
+
+Do **not** drag-drop/open `index.html` via `file://`. Babel-standalone loads the external JSX files with XHR, and Chromium blocks those `file://` requests with CORS. A tiny local HTTP server avoids that.
 
 The deck is **fixed-width 1920px** by design. Smaller windows will horizontal-scroll; that's expected for a pitch-deck artifact (judges and presenters view at full screen, then export to PDF).
 

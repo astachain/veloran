@@ -68,11 +68,9 @@
   <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
   <script src="deck-stage.js"></script>
-  <script type="text/babel" src="tweaks-panel.jsx"></script>
   <script type="text/babel" src="slides-1-3.jsx"></script>
   <script type="text/babel" src="slides-4-6.jsx"></script>
   <script type="text/babel" src="slides-7-10.jsx"></script>
-  <script type="text/babel" src="veloran-tweaks.jsx"></script>
 
   <script type="text/babel">
     function App() {
@@ -92,10 +90,6 @@
       );
     }
 
-    function TweaksRoot() {
-      return <window.VeloranTweaks />;
-    }
-
     // Render slides directly into deck-stage (must be slotted children)
     const stage = document.querySelector('deck-stage');
 
@@ -103,11 +97,6 @@
     document.getElementById('root')?.remove();
 
     ReactDOM.createRoot(stage).render(<App />);
-
-    // Tweaks panel mounts to body separately
-    const tweaksHost = document.createElement('div');
-    document.body.appendChild(tweaksHost);
-    ReactDOM.createRoot(tweaksHost).render(<TweaksRoot />);
 
     // PDF button — triggers browser print, deck-stage's @media print rules
     // lay each slide out as its own page.
