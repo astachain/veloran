@@ -43,13 +43,16 @@ Opened the post URL in the browser. The page rendered correctly with:
 - Paywall CTA: `Sign in to unlock for $0.10`
 - Subscription CTA: `…or subscribe to dr.adityasaputra for $1.00/month`
 
-Clicking unlock opened the Privy modal. The agent browser does not have the user's email OTP or browser wallet, so the final human wallet signing step is still pending user/manual confirmation.
+Clicking unlock opened the Privy modal. The agent browser cannot complete the user's email OTP or browser wallet approval, so the user completed the final human-only signing step in their own browser.
 
-Pending human-only checks:
+Human browser result: success.
 
-- Privy email/wallet login as a real reader.
-- Wallet transaction modal shows SPL transferChecked + memo instruction.
-- Content reveals after the browser wallet payment.
+- Privy email/wallet login as a real reader completed.
+- Browser wallet payment completed on Solana devnet.
+- Content revealed after payment.
+- User reported no error text.
+- Human tx: `3k3iScUcV8V69tb9gs1PkPuZANp8KDinsfEvSPFyGKWWdMbWiT8tWk1FPpY36ygc8E9Q3VciUq1dpw1Mvyhndyn5`
+- Solscan: https://solscan.io/tx/3k3iScUcV8V69tb9gs1PkPuZANp8KDinsfEvSPFyGKWWdMbWiT8tWk1FPpY36ygc8E9Q3VciUq1dpw1Mvyhndyn5?cluster=devnet
 
 ## Health endpoint
 
@@ -175,8 +178,29 @@ npm run build                        ✅
 - `parsed transaction fetched when RPC succeeds`
 - `malformed signature RPC errors become tx lookup misses`
 
+## Human browser on-chain verification
+
+The user-provided human browser transaction was checked against the devnet RPC.
+
+- Signature: `3k3iScUcV8V69tb9gs1PkPuZANp8KDinsfEvSPFyGKWWdMbWiT8tWk1FPpY36ygc8E9Q3VciUq1dpw1Mvyhndyn5`
+- Solscan: https://solscan.io/tx/3k3iScUcV8V69tb9gs1PkPuZANp8KDinsfEvSPFyGKWWdMbWiT8tWk1FPpY36ygc8E9Q3VciUq1dpw1Mvyhndyn5?cluster=devnet
+- RPC lookup: found
+- Transaction error: `null`
+- Memo program log: `veloran:intent:38e4ab48c7bce3edd6e8270092514566`
+- Veloran program invoked: `2CtnLfdePpjitQQLtHrQAsa74RXLiubKfSdJmjy2pGcS`
+- USDC mint: `4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU`
+- Creator received: `0.095` devnet USDC
+- Platform received: `0.005` devnet USDC
+- Payer debited: `0.100` devnet USDC
+
+This confirms the browser wallet flow produced the expected memo-bound 95% / 5% split payment and content reveal.
+
 ## Status
 
-Automated/API devnet verification passed.
+Task 7 passed:
 
-Human browser wallet signing remains pending because the agent browser cannot complete Privy OTP / wallet approval without the user.
+- Human browser wallet signing passed.
+- Automated/API devnet verification passed.
+- Replay rejection passed.
+- Negative malformed-signature and wrong-memo checks passed.
+- Health endpoint passed.
