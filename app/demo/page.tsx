@@ -191,7 +191,7 @@ export default function DemoPage() {
                 href="/"
                 className="text-violet-300 hover:text-violet-200 underline underline-offset-2"
               >
-                veloran-paywall-sage.vercel.app
+                veloran.app
               </Link>
             </span>
           </li>

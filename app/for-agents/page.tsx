@@ -86,7 +86,7 @@ export default function ForAgentsPage() {
         </p>
         <CodeBlock
           lang="bash"
-          code={`curl -i https://veloran-paywall-sage.vercel.app/api/x402/<slug>`}
+          code={`curl -i https://veloran.app/api/x402/<slug>`}
         />
         <p className="mt-3">Response (HTTP 402):</p>
         <CodeBlock
@@ -176,7 +176,7 @@ await conn.confirmTransaction(sig, "confirmed");`}
         <CodeBlock
           lang="bash"
           code={`PAYLOAD=$(printf '...' | base64 -w0 | tr '+/' '-_' | tr -d '=')
-curl -i -H "X-PAYMENT: $PAYLOAD" https://veloran-paywall-sage.vercel.app/api/x402/<slug>`}
+curl -i -H "X-PAYMENT: $PAYLOAD" https://veloran.app/api/x402/<slug>`}
         />
         <p className="mt-3">
           The server re-fetches the on-chain transaction, confirms it invoked
@@ -256,7 +256,7 @@ X-PAYMENT-RESPONSE: <base64url of { "ok": true, "txSignature": "..." }>
         </p>
         <CodeBlock
           lang="bash"
-          code={`VELORAN_BASE_URL=https://veloran-paywall-sage.vercel.app \\
+          code={`VELORAN_BASE_URL=https://veloran.app \\
   AGENT_KEYPAIR_PATH=~/.config/solana/agent.json \\
   npm run ai-reader -- <slug>`}
         />
@@ -267,8 +267,10 @@ X-PAYMENT-RESPONSE: <base64url of { "ok": true, "txSignature": "..." }>
           <li className="flex gap-3">
             <span className="mt-2 shrink-0 h-1.5 w-1.5 rounded-full bg-neutral-600" />
             <span>
-              <strong>Devnet only.</strong> Mainnet program audit + deploy
-              comes after the hackathon.
+              <strong>Devnet demo.</strong> The live app stays on devnet for
+              hackathon recording; the mainnet Anchor program is deployed and
+              audit-ready, with activation reserved for a separate launch
+              decision.
             </span>
           </li>
           <li className="flex gap-3">
