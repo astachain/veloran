@@ -1,4 +1,4 @@
-import type { ParsedTransactionWithMeta } from "@solana/web3.js";
+import type { Connection, ParsedTransactionWithMeta } from "@solana/web3.js";
 import { PublicKey } from "@solana/web3.js";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import {
@@ -159,6 +159,20 @@ export function buildPaymentResponseHeader(
   txSignature: string
 ): string {
   return base64urlEncode(JSON.stringify({ ok, txSignature }));
+}
+
+export async function fetchParsedTransaction(
+  connection: Pick<Connection, "getParsedTransaction">,
+  signature: string
+): Promise<ParsedTransactionWithMeta | null> {
+  try {
+    return await connection.getParsedTransaction(signature, {
+      commitment: "confirmed",
+      maxSupportedTransactionVersion: 0,
+    });
+  } catch {
+    return null;
+  }
 }
 
 export type VerifyResult =

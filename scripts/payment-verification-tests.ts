@@ -39,6 +39,10 @@ let verifyOnChainPayment: (args: {
   expectedPayerAddress: string;
   expectedMemo?: string;
 }) => { ok: true; creatorDelta: bigint; platformDelta: bigint; price: bigint } | { ok: false; status: number; error: string };
+let fetchParsedTransaction: (
+  connection: { getParsedTransaction: (...args: unknown[]) => Promise<ParsedTransactionWithMeta | null> },
+  signature: string
+) => Promise<ParsedTransactionWithMeta | null>;
 let validatePaymentIntentRecord: (
   intent: PaymentIntentContext,
   args: { postId: string; payerAddress: string }
@@ -378,13 +382,36 @@ function assertSubscriptionIntentCases(): number {
   return 6;
 }
 
+async function assertFetchParsedTransactionCases(): Promise<number> {
+  const okTx = loadFixture("happy.json");
+  const okConnection = {
+    getParsedTransaction: async () => okTx,
+  };
+  assert.equal(await fetchParsedTransaction(okConnection, "valid-signature"), okTx);
+  console.log("✅ parsed transaction fetched when RPC succeeds");
+
+  const throwingConnection = {
+    getParsedTransaction: async () => {
+      throw new Error("failed to decode signature");
+    },
+  };
+  assert.equal(await fetchParsedTransaction(throwingConnection, "bad-signature"), null);
+  console.log("✅ malformed signature RPC errors become tx lookup misses");
+
+  return 2;
+}
+
 async function main(): Promise<void> {
-  ({ verifyOnChainPayment } = await import("../lib/x402"));
+  ({ verifyOnChainPayment, fetchParsedTransaction } = await import("../lib/x402"));
   ({ validatePaymentIntentRecord } = await import("../lib/payment-intent-validation"));
   ({ validateSubscriptionIntentRecord } = await import("../lib/payment-intents"));
 
-  const total = assertVerificationCases() + assertIntentCases() + assertSubscriptionIntentCases();
-  console.log(`\npayment verification tests: ${total}/${verificationCases.length + 12} passed`);
+  const total =
+    assertVerificationCases() +
+    assertIntentCases() +
+    assertSubscriptionIntentCases() +
+    await assertFetchParsedTransactionCases();
+  console.log(`\npayment verification tests: ${total}/${verificationCases.length + 14} passed`);
 }
 
 main().catch((err) => {

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { verifyPrivyToken } from "@/lib/privy-server";
 import { getServerConnection } from "@/lib/solana";
 import { getUsablePaymentIntent } from "@/lib/payment-intents";
-import { verifyOnChainPayment, VELORAN_X402_NETWORK } from "@/lib/x402";
+import { fetchParsedTransaction, verifyOnChainPayment, VELORAN_X402_NETWORK } from "@/lib/x402";
 import { event, sigPrefix6 } from "@/lib/log";
 import {
   signUnlockToken,
@@ -102,10 +102,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   }
 
   const connection = getServerConnection();
-  const tx = await connection.getParsedTransaction(txSignature, {
-    commitment: "confirmed",
-    maxSupportedTransactionVersion: 0,
-  });
+  const tx = await fetchParsedTransaction(connection, txSignature);
   if (!tx) {
     event("payment_tx_lookup_failed", {
       intentId,

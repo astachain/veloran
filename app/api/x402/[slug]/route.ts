@@ -7,6 +7,7 @@ import { createPaymentIntent, getUsablePaymentIntent } from "@/lib/payment-inten
 import {
   buildPaymentRequirements,
   buildPaymentResponseHeader,
+  fetchParsedTransaction,
   parsePaymentHeader,
   verifyOnChainPayment,
   VELORAN_X402_NETWORK,
@@ -128,10 +129,7 @@ export async function GET(req: NextRequest, { params }: Params) {
   }
 
   const connection = getServerConnection();
-  const tx = await connection.getParsedTransaction(parsed.txSignature, {
-    commitment: "confirmed",
-    maxSupportedTransactionVersion: 0,
-  });
+  const tx = await fetchParsedTransaction(connection, parsed.txSignature);
   if (!tx) {
     event("payment_tx_lookup_failed", {
       intentId: parsed.intentId,

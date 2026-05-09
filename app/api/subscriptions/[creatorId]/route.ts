@@ -7,7 +7,7 @@ import {
   createSubscriptionIntent,
   getUsableSubscriptionIntent,
 } from "@/lib/payment-intents";
-import { verifyOnChainPayment, VELORAN_X402_NETWORK } from "@/lib/x402";
+import { fetchParsedTransaction, verifyOnChainPayment, VELORAN_X402_NETWORK } from "@/lib/x402";
 import { event, sigPrefix6 } from "@/lib/log";
 import {
   signSubscriptionToken,
@@ -204,10 +204,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   // Fetch + verify the on-chain payment
   const connection = getServerConnection();
-  const tx = await connection.getParsedTransaction(txSignature, {
-    commitment: "confirmed",
-    maxSupportedTransactionVersion: 0,
-  });
+  const tx = await fetchParsedTransaction(connection, txSignature);
   if (!tx) {
     event("subscription_tx_lookup_failed", {
       intentId,
