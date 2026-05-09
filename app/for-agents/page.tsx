@@ -1,5 +1,6 @@
+"use client";
+
 import Link from "next/link";
-import type { Metadata } from "next";
 import {
   CURRENT_NETWORK,
   PUBLIC_RPC_URL,
@@ -8,20 +9,15 @@ import {
   VELORAN_TREASURY,
 } from "@/lib/solana";
 
-export const metadata: Metadata = {
-  title: "For agents · Veloran",
-  description:
-    "How AI agents discover, pay for, and unlock Veloran-paywalled resources via x402 + Solana.",
-};
-
 export default function ForAgentsPage() {
   return (
     <main className="flex-1 px-6 py-16 max-w-3xl mx-auto w-full">
       <Link
         href="/"
-        className="text-xs uppercase tracking-[0.2em] text-violet-400"
+        className="group inline-flex items-center gap-1 text-xs uppercase tracking-[0.2em] text-violet-400 hover:text-violet-300 transition-colors"
       >
-        ← Veloran
+        <span className="group-hover:-translate-x-0.5 transition-transform">←</span>
+        Veloran
       </Link>
 
       <header className="mt-6">
@@ -56,7 +52,7 @@ export default function ForAgentsPage() {
 
       <Section title="Human flow vs. agent flow">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-5">
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-5 hover:border-neutral-700 transition-colors">
             <p className="text-xs uppercase tracking-wider text-violet-300">
               Human
             </p>
@@ -68,7 +64,7 @@ export default function ForAgentsPage() {
               <li>Content unlocks; tx receipt on Solscan</li>
             </ol>
           </div>
-          <div className="rounded-xl border border-violet-700/30 bg-violet-950/10 p-5">
+          <div className="rounded-xl border border-violet-500/20 bg-violet-950/10 p-5 hover:border-violet-500/30 transition-colors">
             <p className="text-xs uppercase tracking-wider text-violet-300">
               Agent
             </p>
@@ -220,22 +216,22 @@ X-PAYMENT-RESPONSE: <base64url of { "ok": true, "txSignature": "..." }>
       <Section title="Why Solana">
         <ul className="space-y-2">
           <li className="flex gap-3">
-            <span className="mt-2 shrink-0 h-1.5 w-1.5 rounded-full bg-violet-400" />
+            <span className="mt-2 shrink-0 h-1.5 w-1.5 rounded-full bg-violet-400 shadow-[0_0_6px_rgba(139,92,246,0.4)]" />
             <span>Sub-cent fees make $0.05 per-call pricing viable.</span>
           </li>
           <li className="flex gap-3">
-            <span className="mt-2 shrink-0 h-1.5 w-1.5 rounded-full bg-violet-400" />
+            <span className="mt-2 shrink-0 h-1.5 w-1.5 rounded-full bg-violet-400 shadow-[0_0_6px_rgba(139,92,246,0.4)]" />
             <span>
               Sub-second confirmations let agents complete the round trip in
               one request cycle.
             </span>
           </li>
           <li className="flex gap-3">
-            <span className="mt-2 shrink-0 h-1.5 w-1.5 rounded-full bg-violet-400" />
+            <span className="mt-2 shrink-0 h-1.5 w-1.5 rounded-full bg-violet-400 shadow-[0_0_6px_rgba(139,92,246,0.4)]" />
             <span>USDC supply on Solana &gt; $5B — deep liquidity.</span>
           </li>
           <li className="flex gap-3">
-            <span className="mt-2 shrink-0 h-1.5 w-1.5 rounded-full bg-violet-400" />
+            <span className="mt-2 shrink-0 h-1.5 w-1.5 rounded-full bg-violet-400 shadow-[0_0_6px_rgba(139,92,246,0.4)]" />
             <span>
               Custom programs make atomic payment splits possible. Facilitator
               chains can&apos;t enforce a split without holding funds first.
@@ -314,15 +310,17 @@ X-PAYMENT-RESPONSE: <base64url of { "ok": true, "txSignature": "..." }>
       <div className="mt-12 flex items-center justify-between gap-4 border-t border-neutral-800 pt-6">
         <Link
           href="/"
-          className="text-sm text-neutral-400 hover:text-violet-300"
+          className="group text-sm text-neutral-400 hover:text-violet-300 flex items-center gap-1 transition-colors"
         >
-          ← Back to landing
+          <span className="group-hover:-translate-x-0.5 transition-transform">←</span>
+          Back to landing
         </Link>
         <Link
           href="/demo"
-          className="text-sm text-neutral-500 hover:text-neutral-300"
+          className="group text-sm text-neutral-500 hover:text-neutral-300 flex items-center gap-1 transition-colors"
         >
-          Live demo walkthrough →
+          Live demo walkthrough
+          <span className="group-hover:translate-x-0.5 transition-transform">→</span>
         </Link>
       </div>
     </main>
@@ -345,10 +343,25 @@ function Section({
 }
 
 function CodeBlock({ lang, code }: { lang: string; code: string }) {
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+    } catch {
+      // Fallback silently ignored
+    }
+  };
+
   return (
-    <div className="mt-3 rounded-lg border border-neutral-800 bg-neutral-950/60 overflow-hidden">
-      <div className="px-4 py-1.5 text-[10px] font-mono uppercase tracking-[0.2em] text-neutral-500 border-b border-neutral-800">
-        {lang}
+    <div className="mt-3 rounded-lg border border-neutral-800 bg-neutral-950/60 overflow-hidden group/code">
+      <div className="px-4 py-1.5 flex items-center justify-between text-[10px] font-mono uppercase tracking-[0.2em] text-neutral-500 border-b border-neutral-800">
+        <span>{lang}</span>
+        <button
+          onClick={copyToClipboard}
+          className="opacity-0 group-hover/code:opacity-100 transition-opacity text-neutral-400 hover:text-violet-300"
+          aria-label="Copy code"
+        >
+          Copy
+        </button>
       </div>
       <pre className="px-4 py-3 text-xs font-mono text-neutral-200 overflow-x-auto leading-relaxed">
         <code>{code}</code>

@@ -393,13 +393,22 @@ function EarningsPanel({ earnings }: { earnings: Earnings }) {
 
   if (!hasAnyRevenue) {
     return (
-      <section className="mb-10 rounded-xl border border-neutral-800 bg-neutral-900/40 p-6">
-        <p className="text-xs uppercase tracking-wider text-neutral-500">
-          Earnings
-        </p>
-        <p className="mt-2 text-neutral-400">
-          No unlocks yet. Share a paywall link to start earning.
-        </p>
+      <section className="mb-10 rounded-xl border border-neutral-800 bg-neutral-900/40 p-6 relative overflow-hidden">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(139,92,246,0.04),transparent_60%)]" />
+        <div className="relative">
+          <p className="text-xs uppercase tracking-wider text-neutral-500">
+            Earnings
+          </p>
+          <p className="mt-2 text-neutral-400">
+            No unlocks yet. Share a paywall link to start earning.
+          </p>
+          <Link
+            href="/post/new"
+            className="inline-block mt-3 text-sm text-violet-300 hover:text-violet-200 underline underline-offset-2"
+          >
+            Create your first paywall →
+          </Link>
+        </div>
       </section>
     );
   }

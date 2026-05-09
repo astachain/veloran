@@ -202,18 +202,21 @@ export function PaywallGate({
 
   if (status === "unlocked" && content !== null) {
     return (
-      <div className="mt-10">
-        <div className="rounded-xl border border-violet-700/40 bg-violet-950/20 p-5 mb-6">
-          <p className="text-xs uppercase tracking-wider text-violet-300">
-            Unlocked
-          </p>
+      <div className="mt-10 animate-fade-in-up">
+        <div className="rounded-xl border border-violet-500/30 bg-gradient-to-br from-violet-950/30 to-neutral-900/40 p-5 mb-6">
+          <div className="flex items-center gap-2">
+            <UnlockedIcon />
+            <p className="text-xs uppercase tracking-wider text-violet-300 font-medium">
+              Unlocked
+            </p>
+          </div>
           {txSig && (
-            <p className="mt-1 text-xs text-neutral-500 font-mono break-all">
+            <p className="mt-1.5 text-xs text-neutral-500 font-mono break-all">
               <a
                 href={solscanTxUrl(txSig)}
                 target="_blank"
                 rel="noreferrer"
-                className="hover:text-violet-300"
+                className="hover:text-violet-300 transition-colors"
               >
                 {txSig.slice(0, 12)}…{txSig.slice(-8)} ↗
               </a>
@@ -249,25 +252,25 @@ export function PaywallGate({
   })();
 
   return (
-    <div className="relative mt-10 rounded-xl border border-neutral-800 bg-neutral-900/40 overflow-hidden">
-      <div className="p-6 select-none pointer-events-none">
-        <p className="blur-sm text-neutral-400 leading-relaxed">
-          The rest of this post is paywalled. Inside, the creator shares their
-          full thesis, data, and conclusions — unlocked instantly after
-          payment.
-        </p>
-        <p className="mt-4 blur-sm text-neutral-400 leading-relaxed">
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus
-          lacinia odio vitae vestibulum vestibulum. Cras venenatis euismod
-          malesuada. Nullam cursus sapien vel venenatis.
-        </p>
-        <p className="mt-4 blur-sm text-neutral-400 leading-relaxed">
-          Integer luctus, nisi a tristique scelerisque, mi magna rhoncus leo,
-          at cursus turpis mauris eget metus. Aenean et posuere augue.
-        </p>
+    <div className="relative mt-10 rounded-xl border border-neutral-800 bg-neutral-900/40 overflow-hidden group/gate">
+      {/* Shimmer overlay */}
+      <div className="absolute inset-0 animate-shimmer pointer-events-none z-10" />
+      
+      <div className="p-6 select-none pointer-events-none relative z-0">
+        <div className="space-y-4">
+          <div className="h-4 w-3/4 rounded bg-neutral-800/60" />
+          <div className="h-4 w-full rounded bg-neutral-800/40" />
+          <div className="h-4 w-5/6 rounded bg-neutral-800/40" />
+          <div className="h-4 w-4/5 rounded bg-neutral-800/40" />
+          <div className="h-4 w-2/3 rounded bg-neutral-800/40" />
+          <div className="h-4 w-3/4 rounded bg-neutral-800/60" />
+          <div className="h-4 w-full rounded bg-neutral-800/40" />
+        </div>
       </div>
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-neutral-950/60 to-neutral-950 pointer-events-none" />
-      <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-3 pb-8">
+      
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-neutral-950/60 to-neutral-950 pointer-events-none z-20" />
+      
+      <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-3 pb-8 z-30">
         <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-neutral-500">
           <LockIcon />
           <span>Paywalled</span>
@@ -275,14 +278,14 @@ export function PaywallGate({
         <button
           onClick={handleUnlock}
           disabled={status === "paying" || status === "verifying"}
-          className="px-6 py-3 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-60 disabled:cursor-wait text-white font-medium transition shadow-lg shadow-violet-600/20"
+          className="px-6 py-3 rounded-lg bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 disabled:opacity-60 disabled:cursor-wait text-white font-medium transition-all duration-300 shadow-lg shadow-violet-600/20 hover:shadow-violet-500/30 hover:scale-[1.02] active:scale-[0.98]"
         >
           {label}
         </button>
         {subUpsell && (
           <Link
             href={`/c/${creatorAddress}`}
-            className="text-xs text-neutral-400 hover:text-violet-300 underline underline-offset-2"
+            className="text-xs text-neutral-400 hover:text-violet-300 underline underline-offset-2 transition-colors"
           >
             …or subscribe to{creatorByline ? ` ${creatorByline}` : ""} for
             {" $"}
@@ -311,6 +314,24 @@ function LockIcon() {
     >
       <rect x="4" y="11" width="16" height="10" rx="2" />
       <path d="M8 11V7a4 4 0 1 1 8 0v4" />
+    </svg>
+  );
+}
+
+function UnlockedIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      className="text-violet-400"
+    >
+      <rect x="4" y="11" width="16" height="10" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0" />
+      <path d="M12 15l1.5 1.5L16 13" />
     </svg>
   );
 }
