@@ -17,7 +17,7 @@
 - Humans and AI agents both unlock with USDC on Solana
 - 95% direct to the seller, settled on-chain — no facilitator, no custody
 
-**Footer:** `veloran-paywall-sage.vercel.app` · Solana Frontier · May 2026
+**Footer:** `https://veloran.app` · Solana Frontier · May 2026
 
 **Speaker note:** Open with the one-liner. Don't over-explain — the rest of the deck does the work.
 
@@ -121,17 +121,18 @@
 
 ## Slide 9 — Demo / proof
 
-**Headline:** Live on Solana devnet, end-to-end working today.
+**Headline:** Live on Solana devnet, with mainnet program deployed.
 
 **Bullets:**
-- ✅ Anchor program deployed — `2CtnLfdePpjitQQLtHrQAsa74RXLiubKfSdJmjy2pGcS`
-- ✅ Human flow + AI-agent-style HTTP 402 flow both verified on the live URL
-- ✅ Subscription tiers, on-chain split, single-use payment receipts
+- ✅ Live on Solana devnet — full human + agent flow at https://veloran.app
+- ✅ Anchor program deployed on Solana devnet — `2CtnLfdePpjitQQLtHrQAsa74RXLiubKfSdJmjy2pGcS`
+- ✅ Anchor program deployed on Solana mainnet — `89ZFuq1beQHRHRHWY6yezePsdWvTxtMGrLVDXu8DLa1j`
+- ✅ Mainnet smoke test passed — real `pay_for_content` invocation, on-chain split verified
 - ✅ Open source: `github.com/astachain/veloran`
 
-**Footer:** Watch the 2:30 demo video at the live URL.
+**Footer:** *Mainnet program is deployed and audit-ready; the live app stays on devnet through the hackathon submission. Mainnet activation is a separate launch decision, not a hackathon deliverable.*
 
-**Speaker note:** This is where you point to the live URL. Don't promise — point. Open Solscan and show the program account if questioned.
+**Speaker note:** Point to the live URL and Solscan. Devnet proves the demo path; mainnet proves the program is deployed and smoke-tested.
 
 ---
 
@@ -140,14 +141,14 @@
 **Headline:** Programmable paywalls for the next billion paid requests.
 
 **Bullets:**
-- **Today:** Solana devnet, per-call + subscription, humans + agents
-- **Q3 2026:** Mainnet program audit + deploy, Helius indexer, custom domains for sellers
+- **Today:** Devnet app + mainnet program deployed; per-call + subscription flows work for humans + agents
+- **Q3 2026:** Phase 4 hardening + tiny-value mainnet activation, Helius indexer, custom domains for sellers
 - **Q4 2026:** Native dataset paywalls, multi-asset (SOL, EURC), Veloran SDK so any app paywalls in <30 LOC
 
 **Closing line:** *Publish once. Humans pay with checkout. Agents pay with HTTP 402. Sellers get paid directly on-chain.*
 
 **Footer:**
-- 🌐 `veloran-paywall-sage.vercel.app`
+- 🌐 `https://veloran.app`
 - 💻 `github.com/astachain/veloran`
 - 📧 `contact via GitHub: @astachain`
 

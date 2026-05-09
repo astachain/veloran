@@ -17,8 +17,8 @@ Set up four windows, sized + positioned ahead of time so you can switch with `Cm
 | Window | Contents | Notes |
 |---|---|---|
 | **W1 — Seller Chrome (normal)** | Logged in as the seller (analyst persona) on `/dashboard` | Tier saved: monthly $5, yearly $50. Already published: one written analysis post + one JSON-shaped API endpoint post (slug suggestion: `sol-alpha-signal-2026-04-29`). |
-| **W2 — Buyer Chrome (incognito)** | Signed out, `https://veloran-paywall-sage.vercel.app/p/<api-slug>` open in a tab | Buyer Privy account already used once → faster login. USDC + SOL funded. |
-| **W3 — Terminal** | `cd ~/veloran` ready. Command pre-typed but not yet run: `VELORAN_BASE_URL=https://veloran-paywall-sage.vercel.app AGENT_KEYPAIR_PATH=~/.config/solana/agent.json npm run ai-reader -- <api-slug>` | Use a dark terminal theme (Solarized Dark or similar). Larger font (16-18pt) so judges can read. |
+| **W2 — Buyer Chrome (incognito)** | Signed out, `https://veloran.app/p/<api-slug>` open in a tab | Buyer Privy account already used once → faster login. USDC + SOL funded. |
+| **W3 — Terminal** | `cd ~/veloran` ready. Command pre-typed but not yet run: `VELORAN_BASE_URL=https://veloran.app AGENT_KEYPAIR_PATH=~/.config/solana/agent.json npm run ai-reader -- <api-slug>` | Use a dark terminal theme (Solarized Dark or similar). Larger font (16-18pt) so judges can read. |
 | **W4 — Solscan tab** | `https://solscan.io/account/2CtnLfdePpjitQQLtHrQAsa74RXLiubKfSdJmjy2pGcS?cluster=devnet` open and scrolled to a recent transaction | This is the program account view — shows the deployed `pay_for_content` instruction. |
 
 **Phantom wallet** (for the 5s wallet cutaway): pinned to extension bar, **set to devnet**, **funded with at least 0.05 SOL + 1 USDC**.
@@ -57,7 +57,7 @@ Format below: **`[time]` SCREEN ACTION** (what's visible/changing) — *italiciz
 > *"This is Veloran. A programmable paywall for APIs, datasets, and premium content. Humans and AI agents pay the same endpoint with USDC on Solana."*
 
 **On-screen text overlay (lower third, 0:03 → 0:08):**
-> Veloran · veloran-paywall-sage.vercel.app
+> Veloran · veloran.app
 
 ---
 
@@ -183,11 +183,11 @@ Format below: **`[time]` SCREEN ACTION** (what's visible/changing) — *italiciz
 
 **`[1:55]` W4: Solscan tab in focus. Show the program account page with recent transactions visible.**
 
-> *"This is our Anchor program on Solana devnet."*
+> *"This is our Anchor program. Deployed on Solana devnet at `2CtnLfde…2pGcS` for the demo recording — and also deployed on mainnet at `89ZFuq1…DLa1j`, audit-ready, with a verified `pay_for_content` smoke test on-chain."*
 
 **`[2:00]` W4: Click into one of the recent unlock transactions. Show the token balance changes — buyer -$0.50, seller +$0.475, treasury +$0.025.**
 
-> *"Every settlement — every per-call payment, every subscription — fires this one instruction. Ninety-five percent to the seller. Five percent to Veloran. Atomic. Immutable. Unlike facilitator-style competitors, we never custody the buyer's funds."*
+> *"Every payment fires this one instruction: ninety-five percent to the seller, five percent to Veloran. Atomic, immutable, and no buyer-fund custody."*
 
 ---
 
@@ -197,12 +197,14 @@ Format below: **`[time]` SCREEN ACTION** (what's visible/changing) — *italiciz
 
 **On-screen text:**
 ```
-                Veloran
-   Programmable paywalls for
-   APIs, datasets, and premium content.
+              Veloran
+The payment and access layer for the agent economy.
 
-   veloran-paywall-sage.vercel.app
-   github.com/astachain/veloran
+           https://veloran.app
+        github.com/astachain/veloran
+
+  devnet:   2CtnLfde…2pGcS  (live demo)
+  mainnet:  89ZFuq1…DLa1j   (deployed)
 ```
 
 > *"Publish once. Humans pay with checkout. Agents pay with HTTP 402. Sellers get paid directly on-chain."*
@@ -253,9 +255,11 @@ Budget: 2-3 hours total for first usable cut. Plan for one half-day. Don't try t
 
 When you submit:
 - **Demo video:** Loom URL (or YouTube unlisted upload if portal requires direct upload)
-- **Live URL:** `https://veloran-paywall-sage.vercel.app`
+- **Live URL:** `https://veloran.app`
 - **GitHub:** `https://github.com/astachain/veloran` (make sure it's public — it currently is)
 - **Pitch deck:** PDF export of whichever format you choose
+- **Devnet program:** `2CtnLfdePpjitQQLtHrQAsa74RXLiubKfSdJmjy2pGcS`
+- **Mainnet program:** `89ZFuq1beQHRHRHWY6yezePsdWvTxtMGrLVDXu8DLa1j`
 - **Description (200-500 words):** *can borrow heavily from pitch-deck.md slide 1, 3, 5, 6*
 
 ---

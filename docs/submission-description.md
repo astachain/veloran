@@ -2,6 +2,8 @@
 
 Veloran is the payment and access layer for the agent economy: sellers publish paid APIs, dataset-shaped payloads, and premium content that humans and AI agents unlock with USDC on Solana.
 
+Veloran is live at https://veloran.app for the demo flow. The app currently uses the devnet program for hackathon recording, and the same Anchor program is also deployed on Solana mainnet at `89ZFuq1beQHRHRHWY6yezePsdWvTxtMGrLVDXu8DLa1j` with a verified `pay_for_content` smoke test.
+
 The problem is simple: premium digital resources are still sold through checkout flows, subscriptions, API keys, and enterprise contracts built for human buyers. But AI agents increasingly read content and call APIs directly. They need a machine-readable way to discover a price, pay, and receive the response without a human in the loop.
 
 Pay.sh and Cloudflare Pay-Per-Crawl validate the direction: machine traffic is becoming payable traffic. Veloran focuses on the seller side of that stack. Independent analysts, researchers, data curators, and indie API builders can publish once, set a USDC price, and get a URL that supports both checkout and agent payment.

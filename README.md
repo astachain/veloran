@@ -4,7 +4,7 @@ The payment and access layer for the agent economy.
 
 Sell APIs, datasets, and premium content that humans and AI agents unlock with USDC on Solana. Sellers receive 95% directly, settled on-chain by an Anchor program. Veloran never custodies buyer funds.
 
-**Live demo:** https://veloran-paywall-sage.vercel.app/
+**Live demo:** https://veloran.app/
 **GitHub:** https://github.com/astachain/veloran
 
 ## Hackathon status
@@ -17,7 +17,7 @@ Built for the Solana Frontier Hackathon, May 2026.
 - ✅ Anchor settlement program deployed on devnet
 - ✅ 95/5 seller/platform split enforced atomically on-chain
 - ✅ Per-call unlocks and seller subscriptions
-- 🟡 Mainnet program deploy prepared, pending funding
+- ✅ Mainnet Anchor program deployed and smoke-tested; live app remains on devnet for hackathon recording
 
 ## How it works
 
@@ -33,9 +33,9 @@ Closing line:
 
 ## Reference links
 
-- Live app: https://veloran-paywall-sage.vercel.app/
-- Agent docs: https://veloran-paywall-sage.vercel.app/for-agents
-- Demo summary: https://veloran-paywall-sage.vercel.app/demo
+- Live app: https://veloran.app/
+- Agent docs: https://veloran.app/for-agents
+- Demo summary: https://veloran.app/demo
 - Pitch deck source: `docs/pitch-deck.md`
 - Demo script: `docs/demo-script.md`
 - Submission description: `docs/submission-description.md`
@@ -51,18 +51,36 @@ Closing line:
 - Anchor / Rust on Solana
 - `@solana/web3.js` and `@solana/spl-token`
 
-## Deployed program
+## Deployed programs
 
-Devnet Anchor program:
+Devnet Anchor program (used by the live app for hackathon recording):
 
 ```text
 2CtnLfdePpjitQQLtHrQAsa74RXLiubKfSdJmjy2pGcS
 ```
 
-Solscan:
+Devnet Solscan:
 
 ```text
 https://solscan.io/account/2CtnLfdePpjitQQLtHrQAsa74RXLiubKfSdJmjy2pGcS?cluster=devnet
+```
+
+Mainnet Anchor program (deployed and audit-ready; not yet wired to the live app):
+
+```text
+89ZFuq1beQHRHRHWY6yezePsdWvTxtMGrLVDXu8DLa1j
+```
+
+Mainnet Solscan:
+
+```text
+https://solscan.io/account/89ZFuq1beQHRHRHWY6yezePsdWvTxtMGrLVDXu8DLa1j
+```
+
+Mainnet smoke test transaction:
+
+```text
+2J5G1ttrLH8EVGSfAwPCfR6QhbZV2kgcwBVYaV7uQ9apR5iKrDnzmkmWwHB3Y5RHA1sEwWCpUEZaH5w1uapr81nM
 ```
 
 ## Run locally
@@ -87,7 +105,7 @@ Open http://localhost:3000.
 npm run dev
 npm run build
 npm run lint
-VELORAN_BASE_URL=https://veloran-paywall-sage.vercel.app \
+VELORAN_BASE_URL=https://veloran.app \
   AGENT_KEYPAIR_PATH=~/.config/solana/agent.json \
   npm run ai-reader -- <slug>
 ```
