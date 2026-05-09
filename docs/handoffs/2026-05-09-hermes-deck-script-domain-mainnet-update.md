@@ -174,13 +174,9 @@ If there's a roadmap section listing "Q3 2026 mainnet deploy" or similar — sof
 
 > *Today: devnet app + mainnet program deployed. Q3 2026: Phase 4 hardening + tiny-value mainnet activation.*
 
-### 3. `docs/pitch-deck.html`
+### 3. `docs/pitch-deck.html` — SUPERSEDED, do not edit
 
-This is the rendered HTML deck (Kimi-polished). Mirror the slide-9 + slide-10 + closer content from the markdown deck. URL replacement (`veloran-paywall-sage.vercel.app` → `veloran.app`) should happen here too. Confirm the HTML still renders cleanly in browser after edits.
-
-```bash
-rg -n 'veloran-paywall-sage\.vercel\.app|2CtnLfde' docs/pitch-deck.html
-```
+> **Update (later on 2026-05-09):** the single-file `docs/pitch-deck.html` (Kimi-polished) was replaced by a multi-file React-based deck at `docs/deck/` exported from `claude.ai/design`. Slide content there (`docs/deck/slides-{1-3,4-6,7-10}.jsx`) is **already aligned** with `veloran.app` + both program IDs — Hermes does **NOT** need to edit anything in `docs/deck/`. If `docs/pitch-deck.html` still appears in your local checkout, run `git pull` first; it should be removed in a recent commit.
 
 ### 4. `docs/submission-description.md`
 
@@ -273,7 +269,7 @@ git push origin main
 Asta will:
 1. Pull origin/main on their machine
 2. Read the updated demo script for any final tweaks
-3. Re-export `docs/pitch-deck.html` as PDF (or use Pitch.com / Canva to build the visual deck from the updated `docs/pitch-deck.md`)
+3. Open `docs/deck/index.html` in a browser, click "Save as PDF" (top-right floating button) → export the 10-slide visual deck as PDF for submission
 4. Record the 2:30 demo video on Loom using the updated script + the live URL `https://veloran.app`
 
 Make sure the script reads cleanly aloud — Asta is the narrator and will tweak any phrasing that's awkward to say. Prefer short declarative sentences in the voiceover.

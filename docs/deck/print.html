@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Veloran — Pitch Deck</title>
+  <meta name="viewport" content="width=1920" />
+  <link rel="stylesheet" href="styles.css" />
+  <template id="__bundler_thumbnail">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+      <rect width="200" height="200" fill="#0A0812"/>
+      <path d="M 60 60 L 100 150 L 140 60" stroke="#8B5CF6" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </svg>
+  </template>
+  <script>
+    window.TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+      "accent": "#8B5CF6",
+      "accentSoft": "#A78BFA",
+      "bg": "#0A0812",
+      "motion": true
+    }/*EDITMODE-END*/;
+  </script>
+</head>
+<body>
+  <deck-stage></deck-stage>
+
+  <button id="pdf-btn" type="button" aria-label="Save deck as PDF">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3v12"/>
+      <path d="m7 10 5 5 5-5"/>
+      <path d="M5 21h14"/>
+    </svg>
+    <span>Save as PDF</span>
+  </button>
+
+  <style>
+    #pdf-btn {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 2147483645;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: rgba(15, 12, 25, 0.78);
+      color: #F4F2F8;
+      border: 1px solid rgba(139, 92, 246, 0.4);
+      border-radius: 10px;
+      font-family: 'GeistMono', ui-monospace, monospace;
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      backdrop-filter: blur(12px) saturate(140%);
+      -webkit-backdrop-filter: blur(12px) saturate(140%);
+      transition: border-color 0.2s, background 0.2s, transform 0.1s;
+    }
+    #pdf-btn:hover {
+      border-color: #8B5CF6;
+      background: rgba(139, 92, 246, 0.16);
+    }
+    #pdf-btn:active { transform: translateY(1px); }
+    @media print { #pdf-btn { display: none; } }
+  </style>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script src="deck-stage.js"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+  <script type="text/babel" src="slides-1-3.jsx"></script>
+  <script type="text/babel" src="slides-4-6.jsx"></script>
+  <script type="text/babel" src="slides-7-10.jsx"></script>
+  <script type="text/babel" src="veloran-tweaks.jsx"></script>
+
+  <script type="text/babel">
+    function App() {
+      return (
+        <>
+          <window.SlideCover />
+          <window.SlideProblem />
+          <window.SlideSolution />
+          <window.SlideHuman />
+          <window.SlideAgent />
+          <window.SlideSplit />
+          <window.SlideSubs />
+          <window.SlideWhyNow />
+          <window.SlideRoadmap />
+          <window.SlideAsk />
+        </>
+      );
+    }
+
+    function TweaksRoot() {
+      return <window.VeloranTweaks />;
+    }
+
+    // Render slides directly into deck-stage (must be slotted children)
+    const stage = document.querySelector('deck-stage');
+
+    // remove the placeholder root
+    document.getElementById('root')?.remove();
+
+    ReactDOM.createRoot(stage).render(<App />);
+
+    // Tweaks panel mounts to body separately
+    const tweaksHost = document.createElement('div');
+    document.body.appendChild(tweaksHost);
+    ReactDOM.createRoot(tweaksHost).render(<TweaksRoot />);
+
+    // PDF button — triggers browser print, deck-stage's @media print rules
+    // lay each slide out as its own page.
+    document.getElementById('pdf-btn').addEventListener('click', () => {
+      window.print();
+    });
+  </script>
+<script>
+(async () => {
+  try { await customElements.whenDefined('deck-stage'); } catch (e) {}
+  const ds = document.querySelector('deck-stage');
+  if (ds) {
+    // Weigh only slide children — same filter as deck-stage.length. Skipping
+    // slotted script/style/template keeps inline Babel/CSS from registering
+    // as stable "content" before the framework has mounted anything.
+    const weigh = () => {
+      let text = 0, media = 0;
+      for (const c of ds.children) {
+        const t = c.tagName;
+        if (t === 'SCRIPT' || t === 'STYLE' || t === 'TEMPLATE') continue;
+        text += (c.textContent || '').trim().length;
+        media += c.querySelectorAll('img,svg,canvas,video').length;
+      }
+      return text + media * 100;
+    };
+    const deadline = Date.now() + 15000;
+    let last = -1, stable = 0;
+    while (Date.now() < deadline) {
+      const n = weigh();
+      if (n > 0 && n === last) { if (++stable >= 2) break; } else { stable = 0; }
+      last = n;
+      await new Promise((r) => setTimeout(r, 250));
+    }
+  }
+  try { await document.fonts.ready; } catch (e) {}
+  setTimeout(() => { try { window.print(); } catch (e) {} }, 200);
+})();
+</script>
+</body>
+</html>
