@@ -1,14 +1,33 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, TransferChecked};
 
+// Devnet build (default). Same constants Veloran has used since the
+// devnet program first deployed.
+#[cfg(not(feature = "mainnet"))]
 declare_id!("2CtnLfdePpjitQQLtHrQAsa74RXLiubKfSdJmjy2pGcS");
 
+#[cfg(not(feature = "mainnet"))]
 /// Circle's official USDC mint on Solana devnet.
 pub const USDC_MINT: Pubkey = pubkey!("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
 
+#[cfg(not(feature = "mainnet"))]
 /// Veloran treasury wallet — receives the 5% platform cut.
 /// (Devnet: same as the deployer keypair for easy verification.)
 pub const TREASURY: Pubkey = pubkey!("DgGYE7boZTEwrotFsYS9bFYsrgpz8TC76cXCZ8GcFKnP");
+
+// Mainnet build (anchor build -- --features mainnet). Constants set on
+// 2026-05-09 for the Solana Frontier hackathon mainnet program.
+#[cfg(feature = "mainnet")]
+declare_id!("89ZFuq1beQHRHRHWY6yezePsdWvTxtMGrLVDXu8DLa1j");
+
+#[cfg(feature = "mainnet")]
+/// Circle's official USDC mint on Solana mainnet.
+pub const USDC_MINT: Pubkey = pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+
+#[cfg(feature = "mainnet")]
+/// Veloran treasury wallet on mainnet — receives the 5% platform cut.
+/// Same keypair file is the program's upgrade authority; back up offline.
+pub const TREASURY: Pubkey = pubkey!("8urcsZvfMnj8Rq3qo5Xk7PEDUQ7kS54cFTbPE6DxZsAD");
 
 /// Platform fee in basis points: 500 = 5.00%.
 pub const PLATFORM_BPS: u64 = 500;

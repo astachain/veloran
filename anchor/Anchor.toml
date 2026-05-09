@@ -7,6 +7,9 @@ skip-lint = false
 [programs.devnet]
 veloran_paywall = "2CtnLfdePpjitQQLtHrQAsa74RXLiubKfSdJmjy2pGcS"
 
+[programs.mainnet]
+veloran_paywall = "89ZFuq1beQHRHRHWY6yezePsdWvTxtMGrLVDXu8DLa1j"
+
 [registry]
 url = "https://api.apr.dev"
 
